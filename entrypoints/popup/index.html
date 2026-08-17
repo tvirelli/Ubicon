@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ubicon</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header>
+      <img src="/icon/32.png" alt="" width="20" height="20" />
+      <h1>Ubicon</h1>
+      <span id="db-status"></span>
+    </header>
+    <main id="list"><p class="empty">No devices assigned yet. Open your UniFi admin, click a client, then click "◆ Ubicon icon…".</p></main>
+    <footer>
+      <button id="refresh">Refresh database</button>
+      <button id="export">Export backup</button>
+      <button id="import">Import backup</button>
+      <input id="import-file" type="file" accept="application/json" hidden />
+      <a href="https://github.com/tvirelli/Ubicon-DB" target="_blank">Suggest a device →</a>
+    </footer>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
