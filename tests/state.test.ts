@@ -22,6 +22,12 @@ function uniFiDom() {
       <img src="https://static.ui.com/fingerprint/0/1_101x101.png">
       <span>${MAC}</span>
       <img src="https://static.ui.com/fingerprint/0/1_129x129.png">
+    </div>
+    <div class="viewSwitcher__J27IpbEw">
+      <div class="switcherTab__J27IpbEw">
+        <div class="switcherImage__J27IpbEw"><img src="https://static.ui.com/fingerprint/0/1_51x51.png"></div>
+        <button class="switcherClose__J27IpbEw" aria-label="Close tab client__view-id-divider__${MAC}}"></button>
+      </div>
     </div>`;
 }
 
@@ -52,6 +58,15 @@ test('paintAll unpaints when assignment removed', () => {
   paintAll(new Map(), document);
   const img = document.querySelector(`tr[data-row-id="${MAC}"] img`) as HTMLImageElement;
   expect(img.src).toContain('standard@2x.png');
+});
+
+test('paintAll paints and unpaints the view switcher tab image', () => {
+  uniFiDom();
+  const tabImg = document.querySelector('[class*="switcherTab__"] img') as HTMLImageElement;
+  paintAll(new Map([[MAC, DATA]]), document);
+  expect(tabImg.src).toBe(DATA);
+  paintAll(new Map(), document);
+  expect(tabImg.src).toContain('static.ui.com');
 });
 
 test('currentPanelMac reads MAC from panel text, falls back to last click', () => {

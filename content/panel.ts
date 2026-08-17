@@ -9,10 +9,6 @@ const isDark = () => !!document.querySelector('[class*="-dark__"]');
 const CSS = `
   :host { all: initial; }
   * { box-sizing: border-box; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  .btn { display:inline-flex; align-items:center; gap:6px; margin:8px 16px; padding:6px 12px;
-    border:1px solid #5B3FD1; color:#5B3FD1; background:transparent; border-radius:6px;
-    font-size:13px; cursor:pointer; }
-  .btn:hover { background:rgba(91,63,209,.08); }
   .overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:2147483000; }
   .dlg { position:fixed; top:10vh; left:50%; transform:translateX(-50%); width:min(440px, 92vw);
     max-height:75vh; display:flex; flex-direction:column; border-radius:10px; overflow:hidden;
@@ -44,27 +40,69 @@ const CSS = `
   .save:disabled { opacity:.5; cursor:default; }
 `;
 
-const BTN_HOST_ID = 'ubicon-panel-btn';
+const MODAL_BTN_HOST_ID = 'ubicon-modal-btn';
 const DLG_HOST_ID = 'ubicon-dialog';
+const TIP_HOST_ID = 'ubicon-tip';
 
-export function ensurePanelButton(root: ParentNode): void {
-  const panel = root.querySelector('.PROPERTY_PANEL_CLASSNAME');
-  if (!panel || panel.querySelector(`#${BTN_HOST_ID}`)) return;
-  const anchor = panel.querySelector('[class*="scrollContainer__"]') ?? panel;
+const TIP_CSS = `
+  :host { all: initial; }
+  * { box-sizing: border-box; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:10px;
+    background:#5B3FD1; color:#fff; padding:10px 16px; border-radius:8px; font-size:13px; z-index:2147483002; max-width:80vw; }
+  .toast button { border:0; background:none; color:#fff; opacity:.8; font-size:14px; line-height:1; cursor:pointer; padding:0; }
+  .toast button:hover { opacity:1; }
+`;
+
+export function showTip(text: string): void {
+  document.getElementById(TIP_HOST_ID)?.remove();
   const host = document.createElement('div');
-  host.id = BTN_HOST_ID;
+  host.id = TIP_HOST_ID;
   const shadow = host.attachShadow({ mode: 'closed' });
   const style = document.createElement('style');
-  style.textContent = CSS;
-  const btn = document.createElement('button');
-  btn.className = 'btn';
-  btn.textContent = '◆ Ubicon icon…';
-  btn.addEventListener('click', () => {
-    const mac = currentPanelMac(document);
-    if (mac) openAssignPanel(mac);
-  });
-  shadow.append(style, btn);
-  anchor.prepend(host);
+  style.textContent = TIP_CSS;
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  const span = document.createElement('span');
+  span.textContent = text;
+  const close = document.createElement('button');
+  close.setAttribute('aria-label', 'Dismiss');
+  close.textContent = '✕';
+  close.addEventListener('click', () => host.remove());
+  toast.append(span, close);
+  shadow.append(style, toast);
+  document.body.append(host);
+}
+
+const MODAL_BTN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="18" height="18"><path d="M23 30 V86 A19 19 0 0 0 42 105 H86 A19 19 0 0 0 105 86 V52" fill="none" stroke="#5B3FD1" stroke-width="14" stroke-linecap="round"></path><rect x="98" y="23" width="14" height="14" rx="4" fill="#5B3FD1"></rect><rect x="44" y="44" width="40" height="40" rx="10" fill="#5B3FD1"></rect></svg>`;
+
+const MODAL_BTN_CSS = `
+  :host { all: initial; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; vertical-align:middle;
+    margin-left:8px; cursor:pointer; }
+`;
+
+export function ensureModalButton(root: ParentNode): void {
+  for (const dialog of root.querySelectorAll('[role="dialog"][class*="modal__"]')) {
+    if (!dialog.querySelector('img[src*="fingerprint"]')) continue;
+    const header = dialog.querySelector(':scope > [class*="header__"]');
+    const title = header?.querySelector('[class*="title__"]');
+    if (!title || title.querySelector(`#${MODAL_BTN_HOST_ID}`)) continue;
+    const host = document.createElement('span');
+    host.id = MODAL_BTN_HOST_ID;
+    const shadow = host.attachShadow({ mode: 'closed' });
+    const style = document.createElement('style');
+    style.textContent = MODAL_BTN_CSS;
+    const btn = document.createElement('span');
+    btn.className = 'btn';
+    btn.title = 'Ubicon — community device icons';
+    btn.innerHTML = MODAL_BTN_SVG;
+    btn.addEventListener('click', () => {
+      const mac = currentPanelMac(document);
+      if (mac) openAssignPanel(mac);
+    });
+    shadow.append(style, btn);
+    title.append(host);
+  }
 }
 
 export function openAssignPanel(mac: string): void {
@@ -105,9 +143,9 @@ export function openAssignPanel(mac: string): void {
     const flags = await browser.storage.local.get('tipShown');
     if (!flags.tipShown) {
       await browser.storage.local.set({ tipShown: true });
-      toast(`Icon ${verb}. Tip: set the device's name in UniFi's own Settings tab — Ubicon never changes UniFi settings.`);
-      setTimeout(close, 2500);
-    } else close();
+      showTip(`Icon ${verb}. Tip: set the device's name in UniFi's own Settings tab — Ubicon never changes UniFi settings.`);
+    }
+    close();
   };
 
   const renderDbTab = async () => {

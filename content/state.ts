@@ -2,6 +2,11 @@ import { getAllAssignments, getCachedIcon, iconKey } from '../shared/storage';
 import { paintImg, unpaintImg } from './paint';
 
 const MAC_RE = /\b([0-9a-f]{2}:){5}[0-9a-f]{2}\b/i;
+// Same shape, no leading boundary: the view-switcher aria-label embeds the MAC
+// right after an underscore (e.g. "…divider__0c:37:96:32:bb:44}"), and "_" is a
+// \w character so \b never matches there. The colon-pair shape is distinctive
+// enough on its own; only the trailing boundary is needed.
+const MAC_IN_TEXT_RE = /([0-9a-f]{2}:){5}[0-9a-f]{2}\b/i;
 let lastClickedMac: string | null = null;
 export const setLastClickedMac = (mac: string) => { lastClickedMac = mac.toLowerCase(); };
 
@@ -41,5 +46,14 @@ export function paintAll(map: Map<string, string>, root: ParentNode): void {
       if (dataUri) paintImg(img, dataUri);
       else if (img.dataset.ubicon) unpaintImg(img);
     }
+  }
+  for (const tab of root.querySelectorAll('[class*="viewSwitcher__"] [class*="switcherTab__"]')) {
+    const aria = tab.querySelector('[class*="switcherClose__"]')?.getAttribute('aria-label') ?? '';
+    const m = aria.match(MAC_IN_TEXT_RE);
+    const img = tab.querySelector('img');
+    if (!m || !img) continue;
+    const dataUri = map.get(m[0].toLowerCase());
+    if (dataUri) paintImg(img, dataUri);
+    else if (img.dataset.ubicon) unpaintImg(img);
   }
 }
