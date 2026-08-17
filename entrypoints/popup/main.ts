@@ -16,7 +16,10 @@ async function renderList() {
   const list = $('list');
   const assignments = await getAllAssignments();
   const macs = Object.keys(assignments).sort();
-  if (!macs.length) return; // keep the empty-state paragraph
+  if (!macs.length) {
+    list.innerHTML = '<p class="empty">No devices assigned yet. Open your UniFi admin, click a client, then click "◆ Ubicon icon…".</p>';
+    return;
+  }
   list.innerHTML = '';
   for (const mac of macs) {
     const ref = assignments[mac];
@@ -48,7 +51,11 @@ async function renderList() {
 
 $('refresh').addEventListener('click', async () => {
   $('db-status').textContent = 'refreshing…';
-  await send({ type: 'refresh-index' });
+  const reply = await send({ type: 'refresh-index' });
+  if (!reply.ok) {
+    $('db-status').textContent = 'refresh failed: ' + reply.error;
+    return;
+  }
   renderStatus();
 });
 
