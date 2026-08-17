@@ -67,7 +67,10 @@ export function showTip(text: string): void {
   const close = document.createElement('button');
   close.setAttribute('aria-label', 'Dismiss');
   close.textContent = '✕';
-  close.addEventListener('click', () => host.remove());
+  close.addEventListener('click', () => {
+    browser.storage.local.set({ tipShown: true });
+    host.remove();
+  });
   toast.append(span, close);
   shadow.append(style, toast);
   document.body.append(host);
@@ -77,8 +80,7 @@ const MODAL_BTN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 
 
 const MODAL_BTN_CSS = `
   :host { all: initial; }
-  .btn { display:inline-flex; align-items:center; justify-content:center; vertical-align:middle;
-    margin-left:8px; cursor:pointer; }
+  svg { display:block; }
 `;
 
 export function ensureModalButton(root: ParentNode): void {
@@ -89,18 +91,17 @@ export function ensureModalButton(root: ParentNode): void {
     if (!title || title.querySelector(`#${MODAL_BTN_HOST_ID}`)) continue;
     const host = document.createElement('span');
     host.id = MODAL_BTN_HOST_ID;
+    host.title = 'Ubicon — community device icons';
+    host.style.cssText = 'display:inline-flex;align-items:center;align-self:flex-start;height:20px;margin-left:12px;cursor:pointer;';
     const shadow = host.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
     style.textContent = MODAL_BTN_CSS;
-    const btn = document.createElement('span');
-    btn.className = 'btn';
-    btn.title = 'Ubicon — community device icons';
-    btn.innerHTML = MODAL_BTN_SVG;
-    btn.addEventListener('click', () => {
+    shadow.append(style);
+    shadow.insertAdjacentHTML('beforeend', MODAL_BTN_SVG);
+    host.addEventListener('click', () => {
       const mac = currentPanelMac(document);
       if (mac) openAssignPanel(mac);
     });
-    shadow.append(style, btn);
     title.append(host);
   }
 }
@@ -142,10 +143,12 @@ export function openAssignPanel(mac: string): void {
     if (!reply.ok) { toast(`Ubicon: ${reply.error}`); return; }
     const flags = await browser.storage.local.get('tipShown');
     if (!flags.tipShown) {
-      await browser.storage.local.set({ tipShown: true });
       showTip(`Icon ${verb}. Tip: set the device's name in UniFi's own Settings tab — Ubicon never changes UniFi settings.`);
     }
     close();
+    const modal = [...document.querySelectorAll('[role="dialog"][class*="modal__"]')]
+      .find(d => d.querySelector('img[src*="fingerprint"]'));
+    modal?.querySelector('[class*="closeButton__"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   };
 
   const renderDbTab = async () => {
