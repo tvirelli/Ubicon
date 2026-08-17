@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
 import { loadOverlayMap, paintAll, setLastClickedMac } from '../content/state';
-// import { ensurePanelButton } from '../content/panel'; // enabled in Task 7
+import { ensurePanelButton } from '../content/panel';
 
 export default defineContentScript({
   matches: ['https://unifi.ui.com/*'],
@@ -14,7 +14,7 @@ export default defineContentScript({
       requestAnimationFrame(() => {
         scheduled = false;
         paintAll(map, document);
-        // ensurePanelButton(document); // enabled in Task 7
+        ensurePanelButton(document);
       });
     };
 
