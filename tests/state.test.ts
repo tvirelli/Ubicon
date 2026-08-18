@@ -76,3 +76,45 @@ test('currentPanelMac reads MAC from panel text, falls back to last click', () =
   setLastClickedMac('cc:cc:cc:cc:cc:cc');
   expect(currentPanelMac(document)).toBe('cc:cc:cc:cc:cc:cc');
 });
+
+test('sweep paints an icon on an unknown surface via ancestor attribute MAC', () => {
+  document.body.innerHTML = `
+    <div class="somePage"><div aria-label="Client ${MAC}">
+      <img src="https://static.ui.com/fingerprint/0/9_51x51.png">
+    </div></div>`;
+  paintAll(new Map([[MAC, DATA]]), document);
+  const img = document.querySelector('img') as HTMLImageElement;
+  expect(img.src).toBe(DATA);
+});
+
+test('sweep abandons a candidate whose ancestor carries two distinct MACs', () => {
+  document.body.innerHTML = `
+    <div class="ambiguous" data-primary="${MAC}" data-secondary="aa:aa:aa:aa:aa:aa">
+      <img src="https://static.ui.com/fingerprint/0/9_51x51.png">
+    </div>`;
+  paintAll(new Map([[MAC, DATA]]), document);
+  const img = document.querySelector('img') as HTMLImageElement;
+  expect(img.src).not.toBe(DATA);
+  expect(img.dataset.ubicon).toBeUndefined();
+});
+
+test('sweep falls back to short sibling text content for the MAC', () => {
+  document.body.innerHTML = `
+    <div><span>${MAC}</span><img src="https://static.ui.com/fingerprint/0/9_51x51.png"></div>`;
+  paintAll(new Map([[MAC, DATA]]), document);
+  const img = document.querySelector('img') as HTMLImageElement;
+  expect(img.src).toBe(DATA);
+});
+
+test('sweep unpaints a previously swept icon when the assignment is removed', () => {
+  document.body.innerHTML = `
+    <div class="somePage"><div aria-label="Client ${MAC}">
+      <img src="https://static.ui.com/fingerprint/0/9_51x51.png">
+    </div></div>`;
+  const originalSrc = (document.querySelector('img') as HTMLImageElement).src;
+  paintAll(new Map([[MAC, DATA]]), document);
+  const img = document.querySelector('img') as HTMLImageElement;
+  expect(img.src).toBe(DATA);
+  paintAll(new Map(), document);
+  expect(img.src).toBe(originalSrc);
+});
