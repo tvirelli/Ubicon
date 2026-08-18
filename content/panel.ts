@@ -167,9 +167,14 @@ export function openAssignPanel(mac: string): void {
 
   const finish = async (reply: UbiconReply, verb: string) => {
     if (!reply.ok) { toast(`Ubicon: ${reply.error}`); return; }
-    const flags = await browser.storage.local.get('tipShown');
-    if (!flags.tipShown) {
-      showTip(`Icon ${verb}. Tip: set the device's name in UniFi's own Settings tab — Ubicon never changes UniFi settings.`);
+    // Removal is undoing an assignment, not learning to make one — the
+    // "set the device's name" tip doesn't apply and shouldn't fire (or
+    // consume the one-time tipShown flag) on that path.
+    if (verb !== 'removed') {
+      const flags = await browser.storage.local.get('tipShown');
+      if (!flags.tipShown) {
+        showTip(`Icon ${verb}. Tip: set the device's name in UniFi's own Settings tab — Ubicon never changes UniFi settings.`);
+      }
     }
     close();
     const modal = [...document.querySelectorAll('[role="dialog"][class*="modal__"]')]
@@ -239,6 +244,10 @@ export function openAssignPanel(mac: string): void {
         preview.src = dataUri;
         preview.hidden = false;
         save.disabled = false;
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = () => {
+        toast('Could not read that image file.');
         URL.revokeObjectURL(img.src);
       };
       img.src = URL.createObjectURL(f);

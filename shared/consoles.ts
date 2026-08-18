@@ -49,8 +49,7 @@ export async function addConsoleOrigin(url: string | undefined): Promise<AddCons
 }
 
 export async function removeConsoleOrigin(origin: string): Promise<void> {
-  const hostname = new URL(origin).hostname;
-  await browser.scripting.unregisterContentScripts({ ids: [paintIdFor(hostname), bridgeIdFor(hostname)] }).catch(() => {});
+  await browser.scripting.unregisterContentScripts({ ids: [paintIdFor(origin), bridgeIdFor(origin)] }).catch(() => {});
   const origins = await listConsoleOrigins();
   await browser.storage.local.set({ origins: origins.filter(o => o !== origin) });
 }

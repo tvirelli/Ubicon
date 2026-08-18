@@ -40,3 +40,19 @@ test('icon cache round-trip and key shape', async () => {
   expect(await getCachedIcon('db:z')).toBe('data:image/png;base64,AAAA');
   expect(await getCachedIcon('db:missing')).toBeNull();
 });
+
+test('removeAssignment prunes the custom icon blob along with the assignment', async () => {
+  await setAssignment(MAC, { kind: 'custom', customId: 'u1', label: 'Goofy Lock' });
+  await cacheIcon('custom:u1', 'data:image/png;base64,CUSTOM');
+  await removeAssignment(MAC);
+  expect(await getAssignment(MAC)).toBeNull();
+  expect(await getCachedIcon('custom:u1')).toBeNull();
+});
+
+test('removeAssignment leaves the db icon cache alone (re-derivable, may be shared)', async () => {
+  await setAssignment(MAC, { kind: 'db', deviceId: 'lockly-smart-lock' });
+  await cacheIcon('db:lockly-smart-lock', 'data:image/png;base64,DB');
+  await removeAssignment(MAC);
+  expect(await getAssignment(MAC)).toBeNull();
+  expect(await getCachedIcon('db:lockly-smart-lock')).toBe('data:image/png;base64,DB');
+});

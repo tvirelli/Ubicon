@@ -49,6 +49,11 @@ The device database is community-maintained and open to contributions
   controller as a supported site from Settings. Ubicon only runs on
   unifi.ui.com by default; any additional origin is granted explicitly by
   the user, one at a time, and only for that origin.
+- **contextMenus** — adds the right-click "Add Current Console" item on the
+  toolbar icon, so you can grant Ubicon access to the local UniFi controller
+  you're currently viewing without opening Settings.
+- **activeTab** — reads the active tab's URL only when you open the popup or
+  use that menu, to offer adding that console.
 - **Host permission: unifi.ui.com** — this is where Ubicon's UI (the icon
   picker and header badge) is injected and where it reads client
   identity so it can place the right icon on the right client. Core to the

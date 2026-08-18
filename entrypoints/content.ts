@@ -8,20 +8,47 @@ export default defineContentScript({
   async main() {
     const [map0] = await Promise.all([loadOverlayMap(), hydrateNames()]);
     let map = map0;
-    let scheduled = false;
+
+    // Selects the same icon-shaped <img>s sweepAllIcons treats as candidates
+    // (content/state.ts) — used only to fingerprint the current candidate
+    // set, not to paint anything here.
+    const CANDIDATE_SELECTOR = 'img[src*="fingerprint/"], img[src*="/clients/photos/"], img[data-ubicon]';
+
+    // Cheap signal for "did the set of icons worth resolving actually
+    // change since the last repaint": the count plus each candidate's src,
+    // concatenated. Good enough to detect additions/removals/src swaps
+    // without hashing — collisions would only cost a skipped resolve, never
+    // a wrong paint, since paintAll above already ran against fresh DOM.
+    function candidateFingerprint(): string {
+      const imgs = document.querySelectorAll<HTMLImageElement>(CANDIDATE_SELECTOR);
+      let fp = imgs.length + '|';
+      for (const img of imgs) fp += img.src + ';';
+      return fp;
+    }
+
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+    let lastFingerprint: string | undefined;
+    // MutationObserver can fire dozens of times per second while UniFi's
+    // React app re-renders a table; a ~200ms trailing debounce collapses
+    // that burst into one repaint instead of one per animation frame.
     const repaint = () => {
-      if (scheduled) return;
-      scheduled = true;
-      requestAnimationFrame(() => {
-        scheduled = false;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
         paintAll(map, document);
         try { ensureModalButton(document); ensureHeaderBadge(document); } catch {}
         // Ask the MAIN-world bridge (entrypoints/bridge.content.ts) to
         // (re)resolve any icons it can key off React's internal props. It
-        // replies with 'ubicon:resolved'; harmless to fire every repaint
-        // since the bridge's own resolver is stamp/WeakSet-guarded and cheap.
-        document.dispatchEvent(new CustomEvent('ubicon:resolve'));
-      });
+        // replies with 'ubicon:resolved'. Only worth firing when the
+        // candidate situation actually changed since the last repaint —
+        // the bridge's own resolver is stamp/WeakSet-guarded and cheap, but
+        // there's no point re-running it every debounced repaint when
+        // nothing painting cares about has moved.
+        const fingerprint = candidateFingerprint();
+        if (fingerprint !== lastFingerprint) {
+          lastFingerprint = fingerprint;
+          document.dispatchEvent(new CustomEvent('ubicon:resolve'));
+        }
+      }, 200);
     };
 
     document.addEventListener('click', e => {

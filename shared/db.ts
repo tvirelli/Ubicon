@@ -10,7 +10,7 @@ export const iconUrlFor = (r: DeviceRecord) => RAW_BASE + r.icon;
 export function searchDevices(devices: DeviceRecord[], query: string): DeviceRecord[] {
   const q = query.trim().toLowerCase();
   const hit = (d: DeviceRecord) =>
-    !q || [d.name, d.vendor, d.model, ...d.keywords].some(s => s.toLowerCase().includes(q));
+    !q || [d.name, d.vendor, d.model, ...(d.keywords ?? [])].some(s => s.toLowerCase().includes(q));
   return devices.filter(hit).sort((a, b) => a.name.localeCompare(b.name));
 }
 
