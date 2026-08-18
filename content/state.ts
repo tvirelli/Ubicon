@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
-import { getAllAssignments, getCachedIcon, iconKey } from '../shared/storage';
+import { getAllAssignments, iconKey } from '../shared/storage';
+import type { AssignmentRef } from '../shared/types';
 import { paintImg, unpaintImg } from './paint';
 
 const MAC_RE = /\b([0-9a-f]{2}:){5}[0-9a-f]{2}\b/i;
@@ -15,7 +16,15 @@ const MAC_IN_TEXT_RE = /([0-9a-f]{2}:){5}[0-9a-f]{2}\b/i;
 // what tells a genuine client row apart from one that only looks like one.
 const MAC_EXACT_RE = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i;
 let lastClickedMac: string | null = null;
-export const setLastClickedMac = (mac: string) => { lastClickedMac = mac.toLowerCase(); };
+// UniFi reuses tr[data-row-id] for non-client tables (flows rows carry a
+// flow id there, not a MAC — see MAC_EXACT_RE's own comment) — the content
+// script's click listener passes that attribute straight through, so a
+// non-MAC value must be ignored here rather than clobbering the last
+// genuine client MAC clicked elsewhere.
+export const setLastClickedMac = (mac: string) => {
+  if (!MAC_EXACT_RE.test(mac)) return;
+  lastClickedMac = mac.toLowerCase();
+};
 
 // mac -> display name, captured live from clients-table rows as we paint
 // them. Used by the sweep's name-based fallback for pages that render an
@@ -67,9 +76,17 @@ export function mergeNames(pairs: Array<[string, string]>): boolean {
 
 export async function loadOverlayMap(): Promise<Map<string, string>> {
   const assignments = await getAllAssignments();
+  const entries = Object.entries(assignments);
+  // One batched storage.local.get for every icon this page needs, instead of
+  // a get-per-assignment — matters once a user has assigned more than a
+  // handful of devices, since each storage.local round-trip has fixed
+  // overhead independent of key count.
+  const keyFor = (ref: AssignmentRef) => `icon:${iconKey(ref)}`;
+  const keys = entries.map(([, ref]) => keyFor(ref));
+  const stored = keys.length ? ((await browser.storage.local.get(keys)) as Record<string, string>) : {};
   const map = new Map<string, string>();
-  for (const [mac, ref] of Object.entries(assignments)) {
-    const dataUri = await getCachedIcon(iconKey(ref));
+  for (const [mac, ref] of entries) {
+    const dataUri = stored[keyFor(ref)];
     if (dataUri) map.set(mac.toLowerCase(), dataUri);
   }
   return map;
@@ -201,7 +218,7 @@ function buildReverseNameMap(): Map<string, string> {
   }
   const reverse = new Map<string, string>();
   for (const [name, macs] of macsByName) {
-    if (macs.size === 1) reverse.set(name, [...macs][0]);
+    if (macs.size === 1) reverse.set(name, [...macs][0] ?? '');
   }
   return reverse;
 }

@@ -1,6 +1,10 @@
 import { defineConfig } from 'wxt';
 
 export default defineConfig({
+  // Firefox 128+ supports MV3 (including content-script world: 'MAIN'), so
+  // target MV3 on every browser rather than letting WXT fall back to its
+  // MV2-by-default behavior for firefox.
+  manifestVersion: 3,
   manifest: ({ browser }) => ({
     name: 'Ubicon — Device Icons for UniFi',
     description:
@@ -10,10 +14,9 @@ export default defineConfig({
       'https://unifi.ui.com/*',
       'https://cdn.jsdelivr.net/*',
     ],
-    // Chromium: user grants local-controller origins at runtime.
-    ...(browser === 'firefox'
-      ? { optional_permissions: ['*://*/*'] }
-      : { optional_host_permissions: ['*://*/*'] }),
+    // User grants local-controller origins at runtime, on every target — WXT
+    // converts this to each browser's MV3 equivalent as needed.
+    optional_host_permissions: ['*://*/*'],
     icons: { 16: '/icon/16.png', 32: '/icon/32.png', 48: '/icon/48.png', 96: '/icon/96.png', 128: '/icon/128.png' },
     browser_specific_settings:
       // 128.0: minimum Firefox version supporting content-script world: 'MAIN'

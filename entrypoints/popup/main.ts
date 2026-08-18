@@ -22,12 +22,13 @@ async function renderList() {
   const assignments = await getAllAssignments();
   const macs = Object.keys(assignments).sort();
   if (!macs.length) {
-    list.innerHTML = '<p class="empty">No devices assigned yet. Open your UniFi admin, click a client, then click "◆ Ubicon icon…".</p>';
+    list.innerHTML = '<p class="empty">No devices assigned yet. Open a client\'s Change Icon dialog (click its photo) and press the Ubicon mark next to the dialog title.</p>';
     return;
   }
   list.innerHTML = '';
   for (const mac of macs) {
     const ref = assignments[mac];
+    if (!ref) continue; // keys come straight from Object.keys(assignments) above — narrows for TS only
     const dataUri = await getCachedIcon(iconKey(ref));
     const row = document.createElement('div');
     row.className = 'row';
@@ -167,7 +168,10 @@ $('export').addEventListener('click', async () => {
   a.href = URL.createObjectURL(blob);
   a.download = `ubicon-backup-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
-  URL.revokeObjectURL(a.href);
+  // Deferred: some browsers start the download asynchronously after click(),
+  // and revoking the object URL synchronously can race that and produce an
+  // empty/failed download.
+  setTimeout(() => URL.revokeObjectURL(a.href), 0);
 });
 
 $('import').addEventListener('click', () => $('import-file').click());

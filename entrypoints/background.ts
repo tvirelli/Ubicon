@@ -86,12 +86,16 @@ export async function ensureRegisteredOrigins(): Promise<number> {
   const ids = new Set(existing.map(s => s.id));
   let registered = 0;
   for (const origin of origins) {
-    const missing = registrationsForOrigin(origin).filter(script => !ids.has(script.id));
-    if (missing.length === 0) continue;
     try {
+      // registrationsForOrigin parses `origin` with `new URL(...)` — a
+      // malformed stored origin throws synchronously, and that must not
+      // abort the backfill loop for every other (valid) origin, so the call
+      // lives inside this try alongside the registration call it feeds.
+      const missing = registrationsForOrigin(origin).filter(script => !ids.has(script.id));
+      if (missing.length === 0) continue;
       await browser.scripting.registerContentScripts(missing);
       registered++;
-    } catch { /* e.g. host permission was revoked — skip this origin, keep going */ }
+    } catch { /* e.g. malformed origin, or host permission was revoked — skip, keep going */ }
   }
   return registered;
 }
@@ -128,7 +132,10 @@ export default defineBackground(() => {
     ensureRegisteredOrigins().catch(() => {});
     try {
       // 'action' is the correct context on both Chrome and Firefox MV3.
-      browser.contextMenus.create({ id: ADD_CONSOLE_MENU_ID, title: 'Add Current Console', contexts: ['action'] }).catch(() => {});
+      // Note: contextMenus.create returns the new menu id synchronously on
+      // Chrome (not a Promise) — the try/catch alone covers a synchronous
+      // throw, e.g. re-creating an id that already exists on an update.
+      browser.contextMenus.create({ id: ADD_CONSOLE_MENU_ID, title: 'Add Current Console', contexts: ['action'] });
     } catch { /* e.g. re-created on an update — ignore */ }
   });
   browser.contextMenus.onClicked.addListener((info, tab) => {

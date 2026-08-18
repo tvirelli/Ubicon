@@ -111,3 +111,29 @@ test('ensureRegisteredOrigins skips an origin whose scripts are both already reg
   expect(n).toBe(0);
   expect(registerContentScripts).not.toHaveBeenCalled();
 });
+
+test('ensureRegisteredOrigins skips a malformed stored origin without aborting the backfill for the rest', async () => {
+  // registrationsForOrigin parses each origin with `new URL(...)`, which
+  // throws synchronously for a malformed value — that must not abort the
+  // whole loop and strand every other (valid) stored origin unregistered.
+  const registerContentScripts = stubScripting([]);
+  await fakeBrowser.storage.local.set({ origins: ['not a url', 'https://10.71.0.2'] });
+  const n = await ensureRegisteredOrigins();
+  expect(n).toBe(1);
+  expect(registerContentScripts).toHaveBeenCalledTimes(1);
+  expect(registerContentScripts).toHaveBeenCalledWith([
+    expect.objectContaining({ id: 'ubicon-10.71.0.2' }),
+    expect.objectContaining({ id: 'ubicon-bridge-10.71.0.2' }),
+  ]);
+});
+
+test('ensureRegisteredOrigins derives ids from host (hostname+port) for a stored origin with a port', async () => {
+  const registerContentScripts = stubScripting([]);
+  await fakeBrowser.storage.local.set({ origins: ['https://10.71.0.5:8443'] });
+  const n = await ensureRegisteredOrigins();
+  expect(n).toBe(1);
+  expect(registerContentScripts).toHaveBeenCalledWith([
+    expect.objectContaining({ id: 'ubicon-10.71.0.5-8443', matches: ['https://10.71.0.5:8443/*'] }),
+    expect.objectContaining({ id: 'ubicon-bridge-10.71.0.5-8443', world: 'MAIN' }),
+  ]);
+});

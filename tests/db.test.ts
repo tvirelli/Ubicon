@@ -19,8 +19,8 @@ test('empty query returns all sorted by name', () => {
 });
 
 test('matches across name, vendor, model, keywords, case-insensitive', () => {
-  expect(searchDevices(IDX.devices, 'PRINTER')[0].id).toBe('b');
-  expect(searchDevices(IDX.devices, 'al-1')[0].id).toBe('a');
+  expect(searchDevices(IDX.devices, 'PRINTER')[0]?.id).toBe('b');
+  expect(searchDevices(IDX.devices, 'al-1')[0]?.id).toBe('a');
   expect(searchDevices(IDX.devices, 'zzz')).toEqual([]);
 });
 

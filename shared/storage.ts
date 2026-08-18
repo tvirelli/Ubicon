@@ -25,7 +25,19 @@ export async function getAllAssignments(): Promise<Record<string, AssignmentRef>
 
 export const setAssignment = (mac: string, ref: AssignmentRef) =>
   browser.storage.sync.set({ [A(mac)]: encode(ref) });
-export const removeAssignment = (mac: string) => browser.storage.sync.remove(A(mac));
+
+export async function removeAssignment(mac: string): Promise<void> {
+  // A custom icon's blob has no other owner and can't be re-derived (unlike
+  // a db icon, which just gets re-downloaded next hydrate) — read the
+  // assignment before removing it so its blob can be pruned too, rather than
+  // leaking forever in storage.local under a mac no assignment points to
+  // anymore.
+  const ref = await getAssignment(mac);
+  await browser.storage.sync.remove(A(mac));
+  if (ref?.kind === 'custom') {
+    await browser.storage.local.remove(`icon:${iconKey(ref)}`);
+  }
+}
 
 export const iconKey = (ref: AssignmentRef) =>
   ref.kind === 'db' ? `db:${ref.deviceId}` : `custom:${ref.customId}`;
@@ -55,10 +67,34 @@ export async function exportAll(): Promise<ExportFile> {
   return { format: 'ubicon-backup', version: 1, exportedAt: new Date().toISOString(), assignments, customIcons };
 }
 
+// Matches content/state.ts's MAC_EXACT_RE — kept as a separate constant here
+// rather than imported, since shared/storage.ts must not depend on the
+// content script (content/state.ts already imports from here).
+const MAC_SHAPE_RE = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i;
+
+function isValidAssignmentRef(v: unknown): v is AssignmentRef {
+  if (!v || typeof v !== 'object') return false;
+  const r = v as Record<string, unknown>;
+  if (r['kind'] === 'db') return typeof r['deviceId'] === 'string';
+  if (r['kind'] === 'custom') return typeof r['customId'] === 'string' && typeof r['label'] === 'string';
+  return false;
+}
+
 export async function importAll(file: ExportFile) {
   if (file?.format !== 'ubicon-backup' || file.version !== 1) throw new Error('Not an Ubicon backup file');
   let assignments = 0, customIcons = 0;
-  for (const [mac, ref] of Object.entries(file.assignments)) { await setAssignment(mac, ref); assignments++; }
-  for (const [id, dataUri] of Object.entries(file.customIcons)) { await cacheIcon(`custom:${id}`, dataUri); customIcons++; }
+  // Untrusted input (a user-supplied JSON file) — skip anything that
+  // doesn't match the expected shape rather than importing garbage or
+  // throwing away the whole file over one bad entry.
+  for (const [mac, ref] of Object.entries(file.assignments ?? {})) {
+    if (!MAC_SHAPE_RE.test(mac) || !isValidAssignmentRef(ref)) continue;
+    await setAssignment(mac, ref);
+    assignments++;
+  }
+  for (const [id, dataUri] of Object.entries(file.customIcons ?? {})) {
+    if (typeof dataUri !== 'string' || !dataUri.startsWith('data:image/')) continue;
+    await cacheIcon(`custom:${id}`, dataUri);
+    customIcons++;
+  }
   return { assignments, customIcons };
 }

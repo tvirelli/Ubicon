@@ -53,10 +53,10 @@ test('paintAll paints assigned row and panel images, leaves others alone', () =>
   uniFiDom();
   paintAll(new Map([[MAC, DATA]]), document);
   const imgs = [...document.querySelectorAll('img')] as HTMLImageElement[];
-  expect(imgs[0].src).toBe(DATA);                 // assigned row
-  expect(imgs[1].src).toContain('static.ui.com'); // other row untouched
-  expect(imgs[2].src).toBe(DATA);                 // panel header icon
-  expect(imgs[3].src).toBe(DATA);                 // panel overview image
+  expect(imgs[0]!.src).toBe(DATA);                 // assigned row
+  expect(imgs[1]!.src).toContain('static.ui.com'); // other row untouched
+  expect(imgs[2]!.src).toBe(DATA);                 // panel header icon
+  expect(imgs[3]!.src).toBe(DATA);                 // panel overview image
 });
 
 test('paintAll unpaints when assignment removed', () => {
@@ -81,6 +81,14 @@ test('currentPanelMac reads MAC from panel text, falls back to last click', () =
   expect(currentPanelMac(document)).toBe(MAC);
   document.querySelector('.PROPERTY_PANEL_CLASSNAME span')!.textContent = 'no mac here';
   setLastClickedMac('cc:cc:cc:cc:cc:cc');
+  expect(currentPanelMac(document)).toBe('cc:cc:cc:cc:cc:cc');
+});
+
+test('setLastClickedMac ignores a non-MAC value (e.g. a flows row id) rather than clobbering the last real click', () => {
+  uniFiDom();
+  document.querySelector('.PROPERTY_PANEL_CLASSNAME span')!.textContent = 'no mac here';
+  setLastClickedMac('cc:cc:cc:cc:cc:cc');
+  setLastClickedMac('6a849daaddff1f090b235e05'); // flow row id, not a MAC — must be ignored
   expect(currentPanelMac(document)).toBe('cc:cc:cc:cc:cc:cc');
 });
 
@@ -248,14 +256,14 @@ test('a panel without a MAC in its text lets each image key off its own client n
   paintAll(new Map([[MAC_A, DATA_A], [MAC_B, DATA_B]]), document);
 
   const imgs = [...document.querySelectorAll('img')] as HTMLImageElement[];
-  expect(imgs[0].src).toBe(DATA_A);
-  expect(imgs[1].src).toBe(DATA_B);
+  expect(imgs[0]!.src).toBe(DATA_A);
+  expect(imgs[1]!.src).toBe(DATA_B);
 });
 
 test('a panel with a MAC in its text still bulk-paints every device image inside it', () => {
   uniFiDom();
   paintAll(new Map([[MAC, DATA]]), document);
   const panelImgs = [...document.querySelectorAll('.PROPERTY_PANEL_CLASSNAME img')] as HTMLImageElement[];
-  expect(panelImgs[0].src).toBe(DATA);
-  expect(panelImgs[1].src).toBe(DATA);
+  expect(panelImgs[0]!.src).toBe(DATA);
+  expect(panelImgs[1]!.src).toBe(DATA);
 });

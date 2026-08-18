@@ -79,6 +79,21 @@ test('listConsoleOrigins returns the stored origins', async () => {
   expect(await listConsoleOrigins()).toEqual(['https://10.71.0.1', 'https://10.71.0.2']);
 });
 
+test('addConsoleOrigin derives script ids from host (hostname+port), sanitizing the colon', async () => {
+  // Two controllers on the same hostname but different ports are distinct
+  // origins and must get distinct, non-colliding script ids.
+  stubPermissions(true);
+  const { registerContentScripts } = stubScripting([]);
+
+  const result = await addConsoleOrigin('https://10.71.0.9:8443/network/default');
+
+  expect(result).toBe('added');
+  expect(registerContentScripts).toHaveBeenCalledWith([
+    expect.objectContaining({ id: 'ubicon-10.71.0.9-8443', matches: ['https://10.71.0.9:8443/*'] }),
+    expect.objectContaining({ id: 'ubicon-bridge-10.71.0.9-8443', world: 'MAIN' }),
+  ]);
+});
+
 test('removeConsoleOrigin unregisters both content script ids and drops the origin from storage', async () => {
   const { unregisterContentScripts } = stubScripting([]);
   await fakeBrowser.storage.local.set({ origins: ['https://10.71.0.1', 'https://10.71.0.2'] });
@@ -87,6 +102,16 @@ test('removeConsoleOrigin unregisters both content script ids and drops the orig
 
   expect(unregisterContentScripts).toHaveBeenCalledWith({ ids: ['ubicon-10.71.0.1', 'ubicon-bridge-10.71.0.1'] });
   expect(await listConsoleOrigins()).toEqual(['https://10.71.0.2']);
+});
+
+test('removeConsoleOrigin derives ids from the origin (including port) when unregistering', async () => {
+  const { unregisterContentScripts } = stubScripting([]);
+  await fakeBrowser.storage.local.set({ origins: ['https://10.71.0.1:8443'] });
+
+  await removeConsoleOrigin('https://10.71.0.1:8443');
+
+  expect(unregisterContentScripts).toHaveBeenCalledWith({ ids: ['ubicon-10.71.0.1-8443', 'ubicon-bridge-10.71.0.1-8443'] });
+  expect(await listConsoleOrigins()).toEqual([]);
 });
 
 test('removeConsoleOrigin tolerates an unregister failure and still drops the origin from storage', async () => {
