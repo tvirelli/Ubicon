@@ -1,12 +1,13 @@
 import { browser } from 'wxt/browser';
-import { loadOverlayMap, paintAll, setLastClickedMac } from '../content/state';
+import { loadOverlayMap, hydrateNames, paintAll, setLastClickedMac } from '../content/state';
 import { ensureModalButton, ensureHeaderBadge } from '../content/panel';
 
 export default defineContentScript({
   matches: ['https://unifi.ui.com/*'],
   runAt: 'document_idle',
   async main() {
-    let map = await loadOverlayMap();
+    const [map0] = await Promise.all([loadOverlayMap(), hydrateNames()]);
+    let map = map0;
     let scheduled = false;
     const repaint = () => {
       if (scheduled) return;

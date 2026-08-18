@@ -1,3 +1,4 @@
+import { browser } from 'wxt/browser';
 import { getAllAssignments, getCachedIcon, iconKey } from '../shared/storage';
 import { paintImg, unpaintImg } from './paint';
 
@@ -9,6 +10,36 @@ const MAC_RE = /\b([0-9a-f]{2}:){5}[0-9a-f]{2}\b/i;
 const MAC_IN_TEXT_RE = /([0-9a-f]{2}:){5}[0-9a-f]{2}\b/i;
 let lastClickedMac: string | null = null;
 export const setLastClickedMac = (mac: string) => { lastClickedMac = mac.toLowerCase(); };
+
+// mac -> display name, captured live from clients-table rows as we paint
+// them. Used by the sweep's name-based fallback for pages that render an
+// icon near a client's display name but never emit the MAC anywhere nearby.
+const knownNames = new Map<string, string>();
+
+// Test-only hooks: simpler than round-tripping through fake storage.
+export function __setNamesForTests(names: Map<string, string>): void {
+  knownNames.clear();
+  for (const [mac, name] of names) knownNames.set(mac, name);
+}
+export function __getNamesForTests(): Map<string, string> {
+  return new Map(knownNames);
+}
+
+function persistNames(): void {
+  const record: Record<string, string> = {};
+  for (const [mac, name] of knownNames) record[mac] = name;
+  // Fire-and-forget: paintAll runs on every mutation-observer tick and must
+  // stay synchronous; nothing downstream needs to await this write.
+  void browser.storage.local.set({ names: record });
+}
+
+// Hydrates the module-level names map from storage. Call once at
+// content-script startup, alongside loadOverlayMap, before the first paint.
+export async function hydrateNames(): Promise<void> {
+  const r = await browser.storage.local.get('names');
+  const stored = (r['names'] as Record<string, string>) ?? {};
+  for (const [mac, name] of Object.entries(stored)) knownNames.set(mac, name);
+}
 
 export async function loadOverlayMap(): Promise<Map<string, string>> {
   const assignments = await getAllAssignments();
@@ -28,14 +59,22 @@ export function currentPanelMac(root: ParentNode): string | null {
 }
 
 export function paintAll(map: Map<string, string>, root: ParentNode): void {
+  let namesChanged = false;
   for (const row of root.querySelectorAll<HTMLTableRowElement>('tr[data-row-id]')) {
     const mac = row.getAttribute('data-row-id')!.toLowerCase();
-    const img = row.querySelector<HTMLImageElement>('td[data-column-id="clientName"] img');
+    const nameCell = row.querySelector<HTMLElement>('td[data-column-id="clientName"]');
+    const name = nameCell?.textContent?.trim();
+    if (name && knownNames.get(mac) !== name) {
+      knownNames.set(mac, name);
+      namesChanged = true;
+    }
+    const img = nameCell?.querySelector<HTMLImageElement>('img');
     if (!img) continue;
     const dataUri = map.get(mac);
     if (dataUri) paintImg(img, dataUri);
     else if (img.dataset.ubicon) unpaintImg(img);
   }
+  if (namesChanged) persistNames();
   const panel = root.querySelector('.PROPERTY_PANEL_CLASSNAME');
   if (panel) {
     const mac = currentPanelMac(root);
@@ -98,14 +137,53 @@ function findAncestorMac(start: Element): string | undefined {
   return undefined;
 }
 
+// Builds name -> mac from the names captured off clients-table rows,
+// excluding any name shared by more than one mac (ambiguity guard) —
+// mirrors the multi-MAC abandonment rule in findAncestorMac.
+function buildReverseNameMap(): Map<string, string> {
+  const macsByName = new Map<string, Set<string>>();
+  for (const [mac, name] of knownNames) {
+    if (!macsByName.has(name)) macsByName.set(name, new Set());
+    macsByName.get(name)!.add(mac);
+  }
+  const reverse = new Map<string, string>();
+  for (const [name, macs] of macsByName) {
+    if (macs.size === 1) reverse.set(name, [...macs][0]);
+  }
+  return reverse;
+}
+
+// Fallback for pages that render an icon near a client's display name but
+// never emit the MAC anywhere nearby (e.g. dashboard widgets, insights/flows
+// pages). Walks up to 8 ancestor levels looking for an element whose exact,
+// trimmed text matches a known (unambiguous) display name. No partial
+// matching, no case folding — names are displayed verbatim. First hit wins.
+function findAncestorMacByName(start: Element, nameToMac: Map<string, string>): string | undefined {
+  let el: Element | null = start.parentElement;
+  let levels = 0;
+  while (el && el !== document.body && levels < 8) {
+    const text = (el.textContent ?? '').trim();
+    if (text && text.length <= 80) {
+      const mac = nameToMac.get(text);
+      if (mac) return mac;
+    }
+    el = el.parentElement;
+    levels++;
+  }
+  return undefined;
+}
+
 // Universal catch-all: many UniFi pages outside the three known surfaces
 // above also render a client icon DOM-near its MAC. Sweep the whole tree for
-// icon-shaped <img>s and paint/unpaint them by walking up to find their MAC.
+// icon-shaped <img>s and paint/unpaint them by walking up to find their MAC,
+// falling back to a display-name match when no MAC is nearby.
 export function sweepAllIcons(map: Map<string, string>, root: ParentNode): void {
   const candidates = new Set<HTMLImageElement>();
   for (const img of root.querySelectorAll<HTMLImageElement>('img[src*="fingerprint/"]')) candidates.add(img);
   for (const img of root.querySelectorAll<HTMLImageElement>('img[src*="/clients/photos/"]')) candidates.add(img);
   for (const img of root.querySelectorAll<HTMLImageElement>('img[data-ubicon]')) candidates.add(img);
+
+  const nameToMac = buildReverseNameMap();
 
   for (const img of candidates) {
     if (img.closest('#ubicon-header-badge, #ubicon-dialog, #ubicon-tip')) continue;
@@ -115,7 +193,7 @@ export function sweepAllIcons(map: Map<string, string>, root: ParentNode): void 
     if (img.closest('.PROPERTY_PANEL_CLASSNAME')) continue;
     if (img.closest('[class*="switcherTab__"]')) continue;
 
-    const mac = findAncestorMac(img);
+    const mac = findAncestorMac(img) ?? findAncestorMacByName(img, nameToMac);
     if (!mac) continue; // not found, or ambiguous — leave untouched
 
     const dataUri = map.get(mac);

@@ -2,17 +2,21 @@
 import { beforeEach, expect, test } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { setAssignment, cacheIcon } from '../shared/storage';
-import { loadOverlayMap, paintAll, currentPanelMac, setLastClickedMac } from '../content/state';
+import {
+  loadOverlayMap, paintAll, currentPanelMac, setLastClickedMac,
+  __setNamesForTests, __getNamesForTests,
+} from '../content/state';
 
 const MAC = 'd4:3d:39:80:fc:80';
 const DATA = 'data:image/png;base64,LOCK';
+const NAME = "Nick's Laptop";
 
 function uniFiDom() {
   document.body.innerHTML = `
     <table><tbody>
       <tr data-row-id="${MAC}" data-testid="side-panel-trigger">
         <td data-column-id="status"></td>
-        <td data-column-id="clientName"><img src="/app-assets/x/standard@2x.png" srcset="/x 1x"></td>
+        <td data-column-id="clientName"><img src="/app-assets/x/standard@2x.png" srcset="/x 1x"><span>${NAME}</span></td>
       </tr>
       <tr data-row-id="aa:aa:aa:aa:aa:aa">
         <td data-column-id="clientName"><img src="https://static.ui.com/fingerprint/0/1_51x51.png"></td>
@@ -31,7 +35,10 @@ function uniFiDom() {
     </div>`;
 }
 
-beforeEach(() => fakeBrowser.reset());
+beforeEach(() => {
+  fakeBrowser.reset();
+  __setNamesForTests(new Map());
+});
 
 test('loadOverlayMap joins assignments with cached icons only', async () => {
   await setAssignment(MAC, { kind: 'db', deviceId: 'lockly-smart-lock' });
@@ -117,4 +124,29 @@ test('sweep unpaints a previously swept icon when the assignment is removed', ()
   expect(img.src).toBe(DATA);
   paintAll(new Map(), document);
   expect(img.src).toBe(originalSrc);
+});
+
+test('paintAll captures client display names off table rows', () => {
+  uniFiDom();
+  paintAll(new Map(), document);
+  expect(__getNamesForTests().get(MAC)).toBe(NAME);
+});
+
+test('sweep falls back to a display-name match when no MAC is nearby', () => {
+  document.body.innerHTML = `
+    <div><span>${NAME}</span><img src="https://static.ui.com/fingerprint/0/2665_51x51.png"></div>`;
+  __setNamesForTests(new Map([[MAC, NAME]]));
+  paintAll(new Map([[MAC, DATA]]), document);
+  const img = document.querySelector('img') as HTMLImageElement;
+  expect(img.src).toBe(DATA);
+});
+
+test('sweep name fallback abandons a name shared by two macs', () => {
+  document.body.innerHTML = `
+    <div><span>${NAME}</span><img src="https://static.ui.com/fingerprint/0/2665_51x51.png"></div>`;
+  __setNamesForTests(new Map([[MAC, NAME], ['aa:aa:aa:aa:aa:aa', NAME]]));
+  paintAll(new Map([[MAC, DATA]]), document);
+  const img = document.querySelector('img') as HTMLImageElement;
+  expect(img.src).not.toBe(DATA);
+  expect(img.dataset.ubicon).toBeUndefined();
 });
