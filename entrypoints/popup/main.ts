@@ -40,12 +40,17 @@ async function renderList() {
     row.querySelector('button')!.addEventListener('click', async () => { await removeAssignment(mac); renderList(); });
     if (ref.kind === 'custom') {
       // Community bridge (spec §5): opens Ubicon-DB's structured
-      // device-suggestion issue form, blank — no prefill of any field.
+      // device-suggestion issue form, prefilled with everything the
+      // extension actually knows about this device — just its display
+      // name. Vendor/model/category stay blank; a custom (non-database)
+      // device has no such data to prefill from.
       const suggest = document.createElement('a');
       suggest.textContent = '↗';
       suggest.title = 'Suggest this device to the community database';
       suggest.target = '_blank';
-      suggest.href = 'https://github.com/tvirelli/Ubicon-DB/issues/new?template=device-suggestion.yml';
+      suggest.href = 'https://github.com/tvirelli/Ubicon-DB/issues/new?template=device-suggestion.yml&title=' +
+        encodeURIComponent(`Device suggestion: ${ref.label}`) +
+        '&device_name=' + encodeURIComponent(ref.label);
       row.append(suggest);
 
       if (dataUri) {
