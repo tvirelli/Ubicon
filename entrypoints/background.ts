@@ -95,6 +95,57 @@ export async function ensureRegisteredOrigins(): Promise<number> {
   return registered;
 }
 
+const ADD_CONSOLE_MENU_ID = 'ubicon-add-console';
+
+export type AddConsoleResult = 'added' | 'already' | 'invalid' | 'denied';
+
+// Same effect as adding an origin in Options, but from the toolbar icon's
+// context menu — the current tab's origin, one click. Kept as a standalone
+// exported function (rather than inline in the menu-click listener) so it's
+// unit-testable without needing to invoke defineBackground's main().
+export async function addConsoleOrigin(url: string | undefined): Promise<AddConsoleResult> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url ?? '');
+  } catch {
+    return 'invalid';
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return 'invalid';
+  const origin = parsed.origin;
+
+  // unifi.ui.com is manifest-declared already; nothing to add for it.
+  if (origin === 'https://unifi.ui.com') return 'already';
+
+  const { origins = [] } = (await browser.storage.local.get('origins')) as { origins?: string[] };
+  if (origins.includes(origin)) return 'already';
+
+  // Valid only when called synchronously from a user gesture (the menu
+  // click) — see the onClicked listener below.
+  const granted = await browser.permissions.request({ origins: [origin + '/*'] });
+  if (!granted) return 'denied';
+
+  // Reuses the same shared registration shape as ensureRegisteredOrigins
+  // and Options' add-origin flow, so all three stay in lockstep.
+  await browser.scripting.registerContentScripts(registrationsForOrigin(origin)).catch(async err => {
+    if (String(err).includes('Duplicate')) return; // already registered — fine
+    throw err;
+  });
+
+  await browser.storage.local.set({ origins: [...origins, origin] });
+  return 'added';
+}
+
+// Best-effort UX: briefly flashes the toolbar badge to confirm what
+// happened, then clears it. Never worth failing the click over.
+function flashBadge(text: string): void {
+  try {
+    browser.action.setBadgeText({ text });
+    setTimeout(() => {
+      try { browser.action.setBadgeText({ text: '' }); } catch { /* tab/action may be gone by then */ }
+    }, 3000);
+  } catch { /* action API unavailable — degrade silently */ }
+}
+
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener((msg: UbiconMsg, _sender, sendResponse) => {
     handleMessage(msg).then(sendResponse);
@@ -105,7 +156,22 @@ export default defineBackground(() => {
   browser.storage.onChanged.addListener((_changes, area) => {
     if (area === 'sync') hydrateMissingIcons().catch(() => {});
   });
-  browser.runtime.onInstalled.addListener(() => { ensureRegisteredOrigins().catch(() => {}); });
+  browser.runtime.onInstalled.addListener(() => {
+    ensureRegisteredOrigins().catch(() => {});
+    try {
+      // 'action' is the correct context on both Chrome and Firefox MV3.
+      browser.contextMenus.create({ id: ADD_CONSOLE_MENU_ID, title: 'Add Current Console', contexts: ['action'] });
+    } catch { /* e.g. re-created on an update — ignore */ }
+  });
+  browser.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId !== ADD_CONSOLE_MENU_ID) return;
+    // Called synchronously (no await before it) so permissions.request
+    // below still runs within this click's user-gesture context.
+    addConsoleOrigin(tab?.url).then(result => {
+      if (result === 'added' && tab?.id != null) browser.tabs.reload(tab.id);
+      flashBadge(result === 'added' ? '✓' : result === 'denied' ? '!' : '');
+    }).catch(() => {});
+  });
   hydrateMissingIcons().catch(() => {});
   ensureRegisteredOrigins().catch(() => {});
 });
