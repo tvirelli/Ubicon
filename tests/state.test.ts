@@ -150,3 +150,15 @@ test('sweep name fallback abandons a name shared by two macs', () => {
   expect(img.src).not.toBe(DATA);
   expect(img.dataset.ubicon).toBeUndefined();
 });
+
+test('sweep uses a bridge-stamped data-ubicon-mac as the top-priority key', () => {
+  // No MAC and no known name anywhere in the ancestor chain — only the
+  // React-props bridge's stamp identifies the client.
+  document.body.innerHTML = `
+    <div class="somePage"><div class="widget">
+      <img src="https://static.ui.com/fingerprint/0/2665_51x51.png" data-ubicon-mac="${MAC}">
+    </div></div>`;
+  paintAll(new Map([[MAC, DATA]]), document);
+  const img = document.querySelector('img') as HTMLImageElement;
+  expect(img.src).toBe(DATA);
+});

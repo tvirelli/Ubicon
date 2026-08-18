@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { bridgeIdFor, paintIdFor, registrationsForOrigin } from '../../shared/registrations';
 
 const $ = (id: string) => document.getElementById(id)!;
 
@@ -15,8 +16,8 @@ async function renderList() {
     const rm = document.createElement('button');
     rm.textContent = 'Remove';
     rm.addEventListener('click', async () => {
-      const id = 'ubicon-' + new URL(origin).hostname;
-      await browser.scripting.unregisterContentScripts({ ids: [id] }).catch(() => {});
+      const hostname = new URL(origin).hostname;
+      await browser.scripting.unregisterContentScripts({ ids: [paintIdFor(hostname), bridgeIdFor(hostname)] }).catch(() => {});
       await browser.storage.local.set({ origins: (await getOrigins()).filter(o => o !== origin) });
       renderList();
     });
@@ -35,13 +36,7 @@ $('add').addEventListener('submit', async e => {
     const pattern = origin + '/*';
     const granted = await browser.permissions.request({ origins: [pattern] });
     if (!granted) { msg.textContent = 'Permission was not granted.'; return; }
-    await browser.scripting.registerContentScripts([{
-      id: 'ubicon-' + url.hostname,
-      matches: [pattern],
-      js: ['content-scripts/content.js'],
-      runAt: 'document_idle',
-      persistAcrossSessions: true,
-    }]).catch(async err => {
+    await browser.scripting.registerContentScripts(registrationsForOrigin(origin)).catch(async err => {
       if (String(err).includes('Duplicate')) return; // already registered — fine
       throw err;
     });

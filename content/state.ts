@@ -173,10 +173,20 @@ function findAncestorMacByName(start: Element, nameToMac: Map<string, string>): 
   return undefined;
 }
 
+// A stamp left by the MAIN-world React props bridge (see content/bridge-core.ts
+// and entrypoints/bridge.content.ts) — an exact-match MAC recovered straight
+// from React's internal props, which is more reliable than scraping ancestor
+// attributes/text and takes priority over both when present.
+const MAC_EXACT_RE = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i;
+function readStampedMac(img: HTMLImageElement): string | undefined {
+  const stamped = img.getAttribute('data-ubicon-mac');
+  return stamped && MAC_EXACT_RE.test(stamped) ? stamped.toLowerCase() : undefined;
+}
+
 // Universal catch-all: many UniFi pages outside the three known surfaces
 // above also render a client icon DOM-near its MAC. Sweep the whole tree for
-// icon-shaped <img>s and paint/unpaint them by walking up to find their MAC,
-// falling back to a display-name match when no MAC is nearby.
+// icon-shaped <img>s and paint/unpaint them, keying off (in priority order)
+// a React-props bridge stamp, an ancestor MAC, or an ancestor display name.
 export function sweepAllIcons(map: Map<string, string>, root: ParentNode): void {
   const candidates = new Set<HTMLImageElement>();
   for (const img of root.querySelectorAll<HTMLImageElement>('img[src*="fingerprint/"]')) candidates.add(img);
@@ -193,7 +203,7 @@ export function sweepAllIcons(map: Map<string, string>, root: ParentNode): void 
     if (img.closest('.PROPERTY_PANEL_CLASSNAME')) continue;
     if (img.closest('[class*="switcherTab__"]')) continue;
 
-    const mac = findAncestorMac(img) ?? findAncestorMacByName(img, nameToMac);
+    const mac = readStampedMac(img) ?? findAncestorMac(img) ?? findAncestorMacByName(img, nameToMac);
     if (!mac) continue; // not found, or ambiguous — leave untouched
 
     const dataUri = map.get(mac);

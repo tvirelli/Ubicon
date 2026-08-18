@@ -16,6 +16,11 @@ export default defineContentScript({
         scheduled = false;
         paintAll(map, document);
         try { ensureModalButton(document); ensureHeaderBadge(document); } catch {}
+        // Ask the MAIN-world bridge (entrypoints/bridge.content.ts) to
+        // (re)resolve any icons it can key off React's internal props. It
+        // replies with 'ubicon:resolved'; harmless to fire every repaint
+        // since the bridge's own resolver is stamp/WeakSet-guarded and cheap.
+        document.dispatchEvent(new CustomEvent('ubicon:resolve'));
       });
     };
 
@@ -26,6 +31,13 @@ export default defineContentScript({
 
     new MutationObserver(repaint).observe(document.body, {
       childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'srcset'],
+    });
+
+    // Only repaint when the bridge actually stamped something new — a
+    // no-op resolve (n === 0) means nothing changed that painting cares
+    // about, so re-triggering here would just loop the dispatch above.
+    document.addEventListener('ubicon:resolved', e => {
+      if ((e as CustomEvent).detail?.n > 0) repaint();
     });
 
     browser.storage.onChanged.addListener(async () => { map = await loadOverlayMap(); repaint(); });

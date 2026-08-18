@@ -5,6 +5,7 @@ import {
   cacheIcon, getAllAssignments, getCachedIcon, iconKey,
   removeAssignment, setAssignment,
 } from '../shared/storage';
+import { paintIdFor, registrationsForOrigin } from '../shared/registrations';
 
 async function blobToDataUri(blob: Blob): Promise<string> {
   const buf = new Uint8Array(await blob.arrayBuffer());
@@ -78,16 +79,10 @@ export async function ensureRegisteredOrigins(): Promise<number> {
   const ids = new Set(existing.map(s => s.id));
   let registered = 0;
   for (const origin of origins) {
-    const id = 'ubicon-' + new URL(origin).hostname;
-    if (ids.has(id)) continue;
+    const hostname = new URL(origin).hostname;
+    if (ids.has(paintIdFor(hostname))) continue;
     try {
-      await browser.scripting.registerContentScripts([{
-        id,
-        matches: [origin + '/*'],
-        js: ['content-scripts/content.js'],
-        runAt: 'document_idle',
-        persistAcrossSessions: true,
-      }]);
+      await browser.scripting.registerContentScripts(registrationsForOrigin(origin));
       registered++;
     } catch { /* e.g. host permission was revoked — skip this origin, keep going */ }
   }

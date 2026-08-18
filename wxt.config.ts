@@ -16,6 +16,8 @@ export default defineConfig({
       : { optional_host_permissions: ['*://*/*'] }),
     icons: { 16: '/icon/16.png', 32: '/icon/32.png', 48: '/icon/48.png', 96: '/icon/96.png', 128: '/icon/128.png' },
     browser_specific_settings:
-      browser === 'firefox' ? { gecko: { id: 'ubicon@tvirelli.github.io', strict_min_version: '121.0' } } : undefined,
+      // 128.0: minimum Firefox version supporting content-script world: 'MAIN'
+      // (used by the React props bridge, entrypoints/bridge.content.ts).
+      browser === 'firefox' ? { gecko: { id: 'ubicon@tvirelli.github.io', strict_min_version: '128.0' } } : undefined,
   }),
 });

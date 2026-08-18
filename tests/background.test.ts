@@ -73,12 +73,14 @@ test('ensureRegisteredOrigins re-registers every stored origin when nothing is c
   const n = await ensureRegisteredOrigins();
   expect(n).toBe(2);
   expect(registerContentScripts).toHaveBeenCalledTimes(2);
-  expect(registerContentScripts).toHaveBeenCalledWith([expect.objectContaining({
-    id: 'ubicon-10.71.0.1', matches: ['https://10.71.0.1/*'],
-  })]);
-  expect(registerContentScripts).toHaveBeenCalledWith([expect.objectContaining({
-    id: 'ubicon-10.71.0.2', matches: ['https://10.71.0.2/*'],
-  })]);
+  expect(registerContentScripts).toHaveBeenCalledWith([
+    expect.objectContaining({ id: 'ubicon-10.71.0.1', matches: ['https://10.71.0.1/*'] }),
+    expect.objectContaining({ id: 'ubicon-bridge-10.71.0.1', matches: ['https://10.71.0.1/*'], world: 'MAIN' }),
+  ]);
+  expect(registerContentScripts).toHaveBeenCalledWith([
+    expect.objectContaining({ id: 'ubicon-10.71.0.2', matches: ['https://10.71.0.2/*'] }),
+    expect.objectContaining({ id: 'ubicon-bridge-10.71.0.2', matches: ['https://10.71.0.2/*'], world: 'MAIN' }),
+  ]);
 });
 
 test('ensureRegisteredOrigins skips origins already registered', async () => {
@@ -87,5 +89,8 @@ test('ensureRegisteredOrigins skips origins already registered', async () => {
   const n = await ensureRegisteredOrigins();
   expect(n).toBe(1);
   expect(registerContentScripts).toHaveBeenCalledTimes(1);
-  expect(registerContentScripts).toHaveBeenCalledWith([expect.objectContaining({ id: 'ubicon-10.71.0.2' })]);
+  expect(registerContentScripts).toHaveBeenCalledWith([
+    expect.objectContaining({ id: 'ubicon-10.71.0.2' }),
+    expect.objectContaining({ id: 'ubicon-bridge-10.71.0.2' }),
+  ]);
 });
