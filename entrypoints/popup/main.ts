@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
 import { exportAll, getAllAssignments, getCachedIcon, getIndexCache, iconKey, importAll, removeAssignment } from '../../shared/storage';
+import { addConsoleOrigin, listConsoleOrigins, removeConsoleOrigin } from '../../shared/consoles';
 import type { UbiconMsg, UbiconReply } from '../../shared/messages';
 
 const send = (msg: UbiconMsg) => browser.runtime.sendMessage(msg) as Promise<UbiconReply>;
@@ -49,6 +50,62 @@ async function renderList() {
   }
 }
 
+async function renderConsoles() {
+  const ul = $('consoles');
+  ul.innerHTML = '';
+  for (const origin of await listConsoleOrigins()) {
+    const li = document.createElement('li');
+    li.className = 'console-row';
+    const span = document.createElement('span');
+    span.className = 'origin';
+    span.textContent = origin;
+    const rm = document.createElement('button');
+    rm.textContent = '✕';
+    rm.title = 'Remove';
+    rm.addEventListener('click', async () => {
+      await removeConsoleOrigin(origin);
+      renderConsoles();
+    });
+    li.append(span, rm);
+    ul.append(li);
+  }
+}
+
+// Offers to add the active tab's console, if it looks like one worth
+// adding: an http(s) origin, not the manifest-declared unifi.ui.com, and
+// not already granted.
+async function setupAddConsoleButton() {
+  const btn = $('add-console') as HTMLButtonElement;
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.url) return;
+
+  let origin: string;
+  try {
+    const url = new URL(tab.url);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+    origin = url.origin;
+  } catch {
+    return;
+  }
+  if (origin === 'https://unifi.ui.com') return;
+  if ((await listConsoleOrigins()).includes(origin)) return;
+
+  btn.textContent = `Add this console (${origin})`;
+  btn.hidden = false;
+  btn.addEventListener('click', async () => {
+    // Called directly here (this click IS the user gesture) — see
+    // shared/consoles.ts's addConsoleOrigin for why that matters.
+    const result = await addConsoleOrigin(tab.url);
+    if (result === 'added') {
+      btn.hidden = true;
+      renderConsoles();
+      if (tab.id != null) browser.tabs.reload(tab.id).catch(() => {});
+    } else if (result === 'denied') {
+      $('db-status').textContent = 'permission declined';
+    }
+  });
+}
+
 $('refresh').addEventListener('click', async () => {
   $('db-status').textContent = 'refreshing…';
   const reply = await send({ type: 'refresh-index' });
@@ -84,3 +141,5 @@ $('import-file').addEventListener('change', async e => {
 
 renderStatus();
 renderList();
+renderConsoles();
+setupAddConsoleButton();
