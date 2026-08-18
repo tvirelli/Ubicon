@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
 import { loadOverlayMap, paintAll, setLastClickedMac } from '../content/state';
-import { ensureModalButton } from '../content/panel';
+import { ensureModalButton, ensureHeaderBadge } from '../content/panel';
 
 export default defineContentScript({
   matches: ['https://unifi.ui.com/*'],
@@ -14,7 +14,7 @@ export default defineContentScript({
       requestAnimationFrame(() => {
         scheduled = false;
         paintAll(map, document);
-        try { ensureModalButton(document); } catch {}
+        try { ensureModalButton(document); ensureHeaderBadge(document); } catch {}
       });
     };
 
