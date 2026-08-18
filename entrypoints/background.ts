@@ -66,6 +66,34 @@ export async function hydrateMissingIcons(): Promise<number> {
   return downloaded;
 }
 
+// Chrome clears all scripting.registerContentScripts registrations on
+// extension reload/update, but the user's storage.local 'origins' list
+// (local UniFi controllers they've granted access to) persists across that.
+// Without this, every reload/update silently strands those origins with no
+// content script until the user manually re-adds them in Options.
+// unifi.ui.com itself is unaffected — it's manifest-declared, not dynamic.
+export async function ensureRegisteredOrigins(): Promise<number> {
+  const { origins = [] } = (await browser.storage.local.get('origins')) as { origins?: string[] };
+  const existing = await browser.scripting.getRegisteredContentScripts();
+  const ids = new Set(existing.map(s => s.id));
+  let registered = 0;
+  for (const origin of origins) {
+    const id = 'ubicon-' + new URL(origin).hostname;
+    if (ids.has(id)) continue;
+    try {
+      await browser.scripting.registerContentScripts([{
+        id,
+        matches: [origin + '/*'],
+        js: ['content-scripts/content.js'],
+        runAt: 'document_idle',
+        persistAcrossSessions: true,
+      }]);
+      registered++;
+    } catch { /* e.g. host permission was revoked — skip this origin, keep going */ }
+  }
+  return registered;
+}
+
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener((msg: UbiconMsg, _sender, sendResponse) => {
     handleMessage(msg).then(sendResponse);
@@ -76,5 +104,7 @@ export default defineBackground(() => {
   browser.storage.onChanged.addListener((_changes, area) => {
     if (area === 'sync') hydrateMissingIcons().catch(() => {});
   });
+  browser.runtime.onInstalled.addListener(() => { ensureRegisteredOrigins().catch(() => {}); });
   hydrateMissingIcons().catch(() => {});
+  ensureRegisteredOrigins().catch(() => {});
 });

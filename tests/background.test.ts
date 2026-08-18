@@ -1,6 +1,6 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
-import { handleMessage, hydrateMissingIcons } from '../entrypoints/background';
+import { handleMessage, hydrateMissingIcons, ensureRegisteredOrigins } from '../entrypoints/background';
 import { setIndexCache, getAssignment, getCachedIcon, setAssignment } from '../shared/storage';
 import type { DbIndex } from '../shared/types';
 
@@ -52,4 +52,40 @@ test('hydrateMissingIcons downloads icons for synced db assignments', async () =
   const n = await hydrateMissingIcons();
   expect(n).toBe(1);
   expect(await getCachedIcon('db:lockly-smart-lock')).toMatch(/^data:/);
+});
+
+// wxt/testing/fake-browser exposes `browser.scripting.*` methods, but they
+// throw MockNotImplementedError when called (no in-memory fake exists for
+// this namespace) — so per-test the API is stubbed with vi.fn() rather than
+// relying on fakeBrowser's own implementation.
+function stubScripting(registered: Array<{ id: string }>) {
+  const registerContentScripts = vi.fn().mockResolvedValue(undefined);
+  (fakeBrowser as any).scripting = {
+    getRegisteredContentScripts: vi.fn().mockResolvedValue(registered),
+    registerContentScripts,
+  };
+  return registerContentScripts;
+}
+
+test('ensureRegisteredOrigins re-registers every stored origin when nothing is currently registered', async () => {
+  const registerContentScripts = stubScripting([]);
+  await fakeBrowser.storage.local.set({ origins: ['https://10.71.0.1', 'https://10.71.0.2'] });
+  const n = await ensureRegisteredOrigins();
+  expect(n).toBe(2);
+  expect(registerContentScripts).toHaveBeenCalledTimes(2);
+  expect(registerContentScripts).toHaveBeenCalledWith([expect.objectContaining({
+    id: 'ubicon-10.71.0.1', matches: ['https://10.71.0.1/*'],
+  })]);
+  expect(registerContentScripts).toHaveBeenCalledWith([expect.objectContaining({
+    id: 'ubicon-10.71.0.2', matches: ['https://10.71.0.2/*'],
+  })]);
+});
+
+test('ensureRegisteredOrigins skips origins already registered', async () => {
+  const registerContentScripts = stubScripting([{ id: 'ubicon-10.71.0.1' }]);
+  await fakeBrowser.storage.local.set({ origins: ['https://10.71.0.1', 'https://10.71.0.2'] });
+  const n = await ensureRegisteredOrigins();
+  expect(n).toBe(1);
+  expect(registerContentScripts).toHaveBeenCalledTimes(1);
+  expect(registerContentScripts).toHaveBeenCalledWith([expect.objectContaining({ id: 'ubicon-10.71.0.2' })]);
 });
