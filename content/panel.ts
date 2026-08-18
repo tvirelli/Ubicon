@@ -108,7 +108,7 @@ export function ensureModalButton(root: ParentNode): void {
 }
 
 const HEADER_BADGE_ID = 'ubicon-header-badge';
-const HEADER_BADGE_SVG = MODAL_BTN_SVG.replace('width="18" height="18"', 'width="20" height="20"');
+const HEADER_BADGE_SVG = MODAL_BTN_SVG.replace('width="18" height="18"', 'width="16" height="16"');
 
 const HEADER_BADGE_CSS = `
   :host { all: initial; }
@@ -122,7 +122,7 @@ export function ensureHeaderBadge(root: ParentNode): void {
   const host = document.createElement('span');
   host.id = HEADER_BADGE_ID;
   host.title = 'Ubicon is active';
-  host.style.cssText = 'display:inline-flex;align-items:center;height:50px;vertical-align:top;';
+  host.style.cssText = 'display:inline-flex;align-items:center;height:50px;vertical-align:top;margin-left:-8px;';
   const shadow = host.attachShadow({ mode: 'closed' });
   const style = document.createElement('style');
   style.textContent = HEADER_BADGE_CSS;
