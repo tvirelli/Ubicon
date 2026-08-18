@@ -112,7 +112,6 @@ const HEADER_BADGE_SVG = MODAL_BTN_SVG.replace('width="18" height="18"', 'width=
 
 const HEADER_BADGE_CSS = `
   :host { all: initial; }
-  .plus { font:600 16px -apple-system,'Segoe UI',Roboto,sans-serif; color:#8A93A6; margin-right:6px; }
   svg { display:block; }
 `;
 
@@ -123,16 +122,13 @@ export function ensureHeaderBadge(root: ParentNode): void {
   const host = document.createElement('span');
   host.id = HEADER_BADGE_ID;
   host.title = 'Ubicon is active';
-  host.style.cssText = 'display:inline-flex;align-items:center;height:50px;vertical-align:top;margin-left:10px;';
+  host.style.cssText = 'display:inline-flex;align-items:center;height:50px;vertical-align:top;';
   const shadow = host.attachShadow({ mode: 'closed' });
   const style = document.createElement('style');
   style.textContent = HEADER_BADGE_CSS;
-  const plus = document.createElement('span');
-  plus.className = 'plus';
-  plus.textContent = '+';
   const holder = document.createElement('span');
   holder.innerHTML = HEADER_BADGE_SVG;
-  shadow.append(style, plus, holder.firstElementChild!);
+  shadow.append(style, holder.firstElementChild!);
   svg.insertAdjacentElement('afterend', host);
 }
 
