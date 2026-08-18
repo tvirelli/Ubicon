@@ -4,7 +4,7 @@ import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { setAssignment, cacheIcon } from '../shared/storage';
 import {
   loadOverlayMap, paintAll, currentPanelMac, setLastClickedMac,
-  __setNamesForTests, __getNamesForTests,
+  __setNamesForTests, __getNamesForTests, mergeNames,
 } from '../content/state';
 
 const MAC = 'd4:3d:39:80:fc:80';
@@ -161,4 +161,14 @@ test('sweep uses a bridge-stamped data-ubicon-mac as the top-priority key', () =
   paintAll(new Map([[MAC, DATA]]), document);
   const img = document.querySelector('img') as HTMLImageElement;
   expect(img.src).toBe(DATA);
+});
+
+test('mergeNames reports a change for a new pair and no change on an identical re-merge', () => {
+  const changed1 = mergeNames([[MAC, NAME]]);
+  expect(changed1).toBe(true);
+  expect(__getNamesForTests().get(MAC)).toBe(NAME);
+
+  const changed2 = mergeNames([[MAC, NAME]]);
+  expect(changed2).toBe(false);
+  expect(__getNamesForTests().get(MAC)).toBe(NAME);
 });

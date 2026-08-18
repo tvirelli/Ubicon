@@ -1,4 +1,4 @@
-import { resolveIconMacs } from '../content/bridge-core';
+import { resolveIconMacs, harvestNameMacPairs } from '../content/bridge-core';
 
 // Runs in the page's MAIN world (not the extension's isolated world), so it
 // can see React's internal fiber props on the live DOM nodes. It never talks
@@ -12,7 +12,10 @@ export default defineContentScript({
   main() {
     document.addEventListener('ubicon:resolve', () => {
       const n = resolveIconMacs(document);
-      document.dispatchEvent(new CustomEvent('ubicon:resolved', { detail: { n } }));
+      // Plain array of 2-string arrays — structured-clone safe across the
+      // CustomEvent boundary between the MAIN and isolated worlds.
+      const pairs = harvestNameMacPairs(document);
+      document.dispatchEvent(new CustomEvent('ubicon:resolved', { detail: { n, pairs } }));
     });
   },
 });

@@ -41,6 +41,24 @@ export async function hydrateNames(): Promise<void> {
   for (const [mac, name] of Object.entries(stored)) knownNames.set(mac, name);
 }
 
+// Merges [mac, name] pairs harvested by the MAIN-world bridge (see
+// content/bridge-core.ts's harvestNameMacPairs) into the known-names map.
+// Returns true if anything was actually added or changed, so callers can
+// decide whether a repaint is worth triggering — re-merging the same pairs
+// on a later pass (the common case, since the bridge harvests on every
+// resolve) is a no-op and reports no change.
+export function mergeNames(pairs: Array<[string, string]>): boolean {
+  let changed = false;
+  for (const [mac, name] of pairs) {
+    if (knownNames.get(mac) !== name) {
+      knownNames.set(mac, name);
+      changed = true;
+    }
+  }
+  if (changed) persistNames();
+  return changed;
+}
+
 export async function loadOverlayMap(): Promise<Map<string, string>> {
   const assignments = await getAllAssignments();
   const map = new Map<string, string>();

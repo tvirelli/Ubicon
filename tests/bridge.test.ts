@@ -1,9 +1,14 @@
 // @vitest-environment happy-dom
 import { beforeEach, expect, test } from 'vitest';
-import { resolveIconMacs } from '../content/bridge-core';
+import { resolveIconMacs, harvestNameMacPairs } from '../content/bridge-core';
 
 const MAC = 'd4:3d:39:80:fc:80';
 const IMG_SRC = 'https://static.ui.com/fingerprint/0/9_51x51.png';
+
+// Fiber nodes are plain objects linked by .return, exactly how the resolver
+// walks them — there's no real React runtime under happy-dom, so tests
+// construct the chain by hand rather than mounting real components.
+type FakeFiber = { memoizedProps?: unknown; return?: FakeFiber | null };
 
 beforeEach(() => { document.body.innerHTML = ''; });
 
@@ -140,4 +145,57 @@ test('a successfully-stamped icon is not recounted or reprocessed on a later pas
   const n2 = resolveIconMacs(document);
   expect(n2).toBe(0);
   expect(img.getAttribute('data-ubicon-mac')).toBe(MAC);
+});
+
+test('stamps a mac found via the fiber walk when the DOM react-props carry nothing useful', () => {
+  document.body.innerHTML = `<div><img src="${IMG_SRC}"></div>`;
+  const img = document.querySelector('img') as HTMLImageElement;
+  // No __reactProps$ anywhere — only a fiber chain, whose direct row-level
+  // memoizedProps carries the client_mac field the DOM props never expose.
+  const rowFiber: FakeFiber = { memoizedProps: { client_mac: 'D4:3D:39:80:FC:80' }, return: null };
+  const imgFiber: FakeFiber = { memoizedProps: { src: IMG_SRC }, return: rowFiber };
+  (img as any)['__reactFiber$f1'] = imgFiber;
+
+  const n = resolveIconMacs(document);
+
+  expect(n).toBe(1);
+  expect(img.getAttribute('data-ubicon-mac')).toBe(MAC);
+});
+
+test('harvestNameMacPairs finds a pair from an array prop several fiber levels up', () => {
+  document.body.innerHTML = `<div><img src="${IMG_SRC}"></div>`;
+  const img = document.querySelector('img') as HTMLImageElement;
+
+  const listFiber: FakeFiber = {
+    memoizedProps: { data: [{ client_mac: 'AA:BB:CC:DD:EE:FF', client_name: 'Thing' }] },
+    return: null,
+  };
+  const midFiber2: FakeFiber = { memoizedProps: {}, return: listFiber };
+  const midFiber1: FakeFiber = { memoizedProps: {}, return: midFiber2 };
+  const imgFiber: FakeFiber = { memoizedProps: {}, return: midFiber1 };
+  (img as any)['__reactFiber$h1'] = imgFiber;
+
+  const pairs = harvestNameMacPairs(document);
+
+  expect(pairs).toContainEqual(['aa:bb:cc:dd:ee:ff', 'Thing']);
+});
+
+test('harvestNameMacPairs ignores items with an invalid mac or a missing name', () => {
+  document.body.innerHTML = `<div><img src="${IMG_SRC}"></div>`;
+  const img = document.querySelector('img') as HTMLImageElement;
+
+  const listFiber: FakeFiber = {
+    memoizedProps: {
+      data: [
+        { client_mac: 'not-a-mac', client_name: 'Bad Mac' },
+        { client_mac: 'AA:BB:CC:DD:EE:FF' }, // no name field at all
+      ],
+    },
+    return: null,
+  };
+  (img as any)['__reactFiber$h2'] = { memoizedProps: {}, return: listFiber };
+
+  const pairs = harvestNameMacPairs(document);
+
+  expect(pairs).toEqual([]);
 });

@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import { loadOverlayMap, hydrateNames, paintAll, setLastClickedMac } from '../content/state';
+import { loadOverlayMap, hydrateNames, mergeNames, paintAll, setLastClickedMac } from '../content/state';
 import { ensureModalButton, ensureHeaderBadge } from '../content/panel';
 
 export default defineContentScript({
@@ -33,11 +33,16 @@ export default defineContentScript({
       childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'srcset'],
     });
 
-    // Only repaint when the bridge actually stamped something new — a
-    // no-op resolve (n === 0) means nothing changed that painting cares
-    // about, so re-triggering here would just loop the dispatch above.
+    // Only repaint when the bridge actually stamped something new, or its
+    // harvested name/mac pairs taught us something we didn't know — a
+    // no-op resolve (n === 0, no new pairs) means nothing changed that
+    // painting cares about, so re-triggering here would just loop the
+    // dispatch above. mergeNames re-merging identical pairs on a later
+    // pass reports no change, which keeps this loop-safe.
     document.addEventListener('ubicon:resolved', e => {
-      if ((e as CustomEvent).detail?.n > 0) repaint();
+      const detail = (e as CustomEvent).detail ?? {};
+      const changed = mergeNames(detail.pairs ?? []);
+      if (detail.n > 0 || changed) repaint();
     });
 
     browser.storage.onChanged.addListener(async () => { map = await loadOverlayMap(); repaint(); });
