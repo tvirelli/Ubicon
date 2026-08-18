@@ -39,17 +39,13 @@ async function renderList() {
     row.querySelector('.badge')!.textContent = ref.kind === 'db' ? 'community' : dataUri ? 'custom' : 'custom · icon missing here';
     row.querySelector('button')!.addEventListener('click', async () => { await removeAssignment(mac); renderList(); });
     if (ref.kind === 'custom') {
-      // Community bridge (spec §5): pre-filled suggestion issue on Ubicon-DB,
-      // targeting the structured issue form so submissions land in a
-      // consistent, machine-parseable shape. Only device_name (plus title)
-      // is prefilled — vendor/model/category/etc. aren't known here.
+      // Community bridge (spec §5): opens Ubicon-DB's structured
+      // device-suggestion issue form, blank — no prefill of any field.
       const suggest = document.createElement('a');
       suggest.textContent = '↗';
       suggest.title = 'Suggest this device to the community database';
       suggest.target = '_blank';
-      suggest.href = 'https://github.com/tvirelli/Ubicon-DB/issues/new?template=device-suggestion.yml&title=' +
-        encodeURIComponent(`Device suggestion: ${ref.label}`) +
-        '&device_name=' + encodeURIComponent(ref.label);
+      suggest.href = 'https://github.com/tvirelli/Ubicon-DB/issues/new?template=device-suggestion.yml';
       row.append(suggest);
 
       if (dataUri) {
