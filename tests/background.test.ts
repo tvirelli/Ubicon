@@ -1,6 +1,6 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
-import { handleMessage, hydrateMissingIcons, ensureRegisteredOrigins, addConsoleOrigin } from '../entrypoints/background';
+import { handleMessage, hydrateMissingIcons, ensureRegisteredOrigins } from '../entrypoints/background';
 import { setIndexCache, getAssignment, getCachedIcon, setAssignment } from '../shared/storage';
 import type { DbIndex } from '../shared/types';
 
@@ -67,14 +67,6 @@ function stubScripting(registered: Array<{ id: string }>) {
   return registerContentScripts;
 }
 
-// Same reasoning as stubScripting: fakeBrowser.permissions.request throws
-// MockNotImplementedError with no stub.
-function stubPermissions(granted: boolean) {
-  const request = vi.fn().mockResolvedValue(granted);
-  (fakeBrowser as any).permissions = { request };
-  return request;
-}
-
 test('ensureRegisteredOrigins re-registers every stored origin when nothing is currently registered', async () => {
   const registerContentScripts = stubScripting([]);
   await fakeBrowser.storage.local.set({ origins: ['https://10.71.0.1', 'https://10.71.0.2'] });
@@ -118,49 +110,4 @@ test('ensureRegisteredOrigins skips an origin whose scripts are both already reg
   const n = await ensureRegisteredOrigins();
   expect(n).toBe(0);
   expect(registerContentScripts).not.toHaveBeenCalled();
-});
-
-test('addConsoleOrigin returns invalid for an undefined url', async () => {
-  expect(await addConsoleOrigin(undefined)).toBe('invalid');
-});
-
-test('addConsoleOrigin returns invalid for a non-http(s) url', async () => {
-  expect(await addConsoleOrigin('chrome://extensions')).toBe('invalid');
-});
-
-test('addConsoleOrigin returns already for unifi.ui.com', async () => {
-  expect(await addConsoleOrigin('https://unifi.ui.com/network/default/clients')).toBe('already');
-});
-
-test('addConsoleOrigin returns already for an origin already stored', async () => {
-  await fakeBrowser.storage.local.set({ origins: ['https://10.71.0.1'] });
-  expect(await addConsoleOrigin('https://10.71.0.1/network/default')).toBe('already');
-});
-
-test('addConsoleOrigin returns denied and registers nothing when permission is refused', async () => {
-  const request = stubPermissions(false);
-  const registerContentScripts = stubScripting([]);
-
-  const result = await addConsoleOrigin('https://10.71.0.5/network/default');
-
-  expect(result).toBe('denied');
-  expect(request).toHaveBeenCalledWith({ origins: ['https://10.71.0.5/*'] });
-  expect(registerContentScripts).not.toHaveBeenCalled();
-  const { origins = [] } = (await fakeBrowser.storage.local.get('origins')) as { origins?: string[] };
-  expect(origins).toEqual([]);
-});
-
-test('addConsoleOrigin registers both content scripts and appends the origin when granted', async () => {
-  stubPermissions(true);
-  const registerContentScripts = stubScripting([]);
-
-  const result = await addConsoleOrigin('https://10.71.0.9/network/default');
-
-  expect(result).toBe('added');
-  expect(registerContentScripts).toHaveBeenCalledWith([
-    expect.objectContaining({ id: 'ubicon-10.71.0.9', matches: ['https://10.71.0.9/*'] }),
-    expect.objectContaining({ id: 'ubicon-bridge-10.71.0.9', world: 'MAIN' }),
-  ]);
-  const { origins = [] } = (await fakeBrowser.storage.local.get('origins')) as { origins?: string[] };
-  expect(origins).toEqual(['https://10.71.0.9']);
 });

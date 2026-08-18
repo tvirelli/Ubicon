@@ -16,6 +16,15 @@ main { max-height: 360px; overflow: auto; padding: 6px 8px; }
 .row .badge { font-size: 9.5px; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); margin-left: auto; }
 .row button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 13px; }
 .row button:hover { color: #c0392b; }
+#consoles-section { padding: 8px 14px 10px; border-top: 1px solid var(--line); }
+#consoles-section h2 { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 6px; }
+#consoles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.console-row { display: flex; align-items: center; gap: 8px; padding: 3px 2px; }
+.console-row .origin { font-size: 11.5px; color: var(--muted); font-family: ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.console-row button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 12px; padding: 0; }
+.console-row button:hover { color: #c0392b; }
+#add-console { display: block; width: 100%; margin-top: 6px; font-size: 11.5px; border: 1px solid var(--accent); background: none; color: var(--accent); border-radius: 6px; padding: 6px 9px; cursor: pointer; }
+#add-console:hover { background: rgba(91, 63, 209, .08); }
 footer { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--line); align-items: center; }
 footer button { font-size: 11.5px; border: 1px solid var(--line); background: none; color: var(--fg); border-radius: 6px; padding: 5px 9px; cursor: pointer; }
 footer button:hover { border-color: var(--accent); color: var(--accent); }
