@@ -21,6 +21,8 @@ main { max-height: 360px; overflow: auto; padding: 6px 8px; }
 .row .badge { font-size: 9.5px; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); margin-left: auto; }
 .row button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 13px; }
 .row button:hover { color: #c0392b; }
+.row a { color: var(--muted); text-decoration: none; font-size: 13px; cursor: pointer; }
+.row a:hover { color: var(--accent); }
 #consoles-section { padding: 8px 14px 10px; border-top: 1px solid var(--line); }
 #consoles-section h2 { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 6px; }
 #consoles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
