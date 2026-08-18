@@ -20,3 +20,8 @@ community database or your own images.
 
 Device database: [Ubicon-DB](https://github.com/tvirelli/Ubicon-DB) — PRs
 welcome, with optional credit for contributors who add a device.
+
+## License
+
+MIT — see [LICENSE](LICENSE). The device database is separately MIT-licensed
+at [tvirelli/Ubicon-DB](https://github.com/tvirelli/Ubicon-DB).
