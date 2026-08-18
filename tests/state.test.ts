@@ -172,3 +172,90 @@ test('mergeNames reports a change for a new pair and no change on an identical r
   expect(changed2).toBe(false);
   expect(__getNamesForTests().get(MAC)).toBe(NAME);
 });
+
+// UniFi reuses tr[data-row-id] for the flows table too, but there the
+// attribute holds a flow id, not a MAC.
+const FLOW_ROW_ID = '6a849daaddff1f090b235e05';
+
+function flowsRowDom() {
+  document.body.innerHTML = `
+    <table><tbody>
+      <tr data-row-id="${FLOW_ROW_ID}" class="FLOWS_TABLE_ROW_CLASSNAME">
+        <td data-column-id="clientName"><div><span>${NAME}</span><img src="https://static.ui.com/fingerprint/0/9_51x51.png"></div></td>
+      </tr>
+    </tbody></table>`;
+}
+
+test('a flows row (non-MAC row id) is painted via the sweep name fallback', () => {
+  flowsRowDom();
+  __setNamesForTests(new Map([[MAC, NAME]]));
+  paintAll(new Map([[MAC, DATA]]), document);
+  const img = document.querySelector('img') as HTMLImageElement;
+  expect(img.src).toBe(DATA);
+});
+
+test('a flows row with an unrecognized display name stays untouched', () => {
+  flowsRowDom();
+  // No knownNames entry for NAME — the sweep's name fallback has nothing to
+  // match, and there's no MAC anywhere for the ordinary ancestor walk either.
+  paintAll(new Map([[MAC, DATA]]), document);
+  const img = document.querySelector('img') as HTMLImageElement;
+  expect(img.src).not.toBe(DATA);
+  expect(img.dataset.ubicon).toBeUndefined();
+});
+
+test('a flows row does not get its flow id captured as a client name', () => {
+  flowsRowDom();
+  paintAll(new Map(), document);
+  expect(__getNamesForTests().has(FLOW_ROW_ID)).toBe(false);
+});
+
+test('a MAC-valued client row is still painted by the row handler and correctly skipped by the sweep', () => {
+  const OTHER_MAC = 'ff:ff:ff:ff:ff:ff';
+  const OTHER_DATA = 'data:image/png;base64,OTHER';
+  document.body.innerHTML = `
+    <table><tbody>
+      <tr data-row-id="${MAC}">
+        <td data-column-id="clientName"><img src="https://static.ui.com/fingerprint/0/1_51x51.png"><span>${NAME}</span></td>
+      </tr>
+    </tbody></table>`;
+  // If the sweep wrongly processed this row's img (the skip rule failing to
+  // recognize a MAC-valued row), the name fallback would key it to
+  // OTHER_MAC instead of the row's own MAC — proving the skip still holds.
+  __setNamesForTests(new Map([[OTHER_MAC, NAME]]));
+  const map = new Map([[MAC, DATA], [OTHER_MAC, OTHER_DATA]]);
+
+  paintAll(map, document);
+
+  const img = document.querySelector('img') as HTMLImageElement;
+  expect(img.src).toBe(DATA);
+});
+
+test('a panel without a MAC in its text lets each image key off its own client name', () => {
+  const MAC_A = 'aa:aa:aa:aa:aa:aa';
+  const MAC_B = 'bb:bb:bb:bb:bb:bb';
+  const NAME_A = 'Client A';
+  const NAME_B = 'Client B';
+  const DATA_A = 'data:image/png;base64,AAA';
+  const DATA_B = 'data:image/png;base64,BBB';
+  document.body.innerHTML = `
+    <div class="PROPERTY_PANEL_CLASSNAME">
+      <div><span>${NAME_A}</span><img src="https://static.ui.com/fingerprint/0/1_51x51.png"></div>
+      <div><span>${NAME_B}</span><img src="https://static.ui.com/fingerprint/0/2_51x51.png"></div>
+    </div>`;
+  __setNamesForTests(new Map([[MAC_A, NAME_A], [MAC_B, NAME_B]]));
+
+  paintAll(new Map([[MAC_A, DATA_A], [MAC_B, DATA_B]]), document);
+
+  const imgs = [...document.querySelectorAll('img')] as HTMLImageElement[];
+  expect(imgs[0].src).toBe(DATA_A);
+  expect(imgs[1].src).toBe(DATA_B);
+});
+
+test('a panel with a MAC in its text still bulk-paints every device image inside it', () => {
+  uniFiDom();
+  paintAll(new Map([[MAC, DATA]]), document);
+  const panelImgs = [...document.querySelectorAll('.PROPERTY_PANEL_CLASSNAME img')] as HTMLImageElement[];
+  expect(panelImgs[0].src).toBe(DATA);
+  expect(panelImgs[1].src).toBe(DATA);
+});

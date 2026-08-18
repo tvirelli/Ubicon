@@ -8,6 +8,12 @@ const MAC_RE = /\b([0-9a-f]{2}:){5}[0-9a-f]{2}\b/i;
 // \w character so \b never matches there. The colon-pair shape is distinctive
 // enough on its own; only the trailing boundary is needed.
 const MAC_IN_TEXT_RE = /([0-9a-f]{2}:){5}[0-9a-f]{2}\b/i;
+// Strict, whole-string match — used wherever a value (a data-row-id, a
+// bridge stamp) must itself BE a MAC, not merely contain one. UniFi reuses
+// tr[data-row-id] for non-client tables too (e.g. flows rows carry a flow
+// id like "6a849daaddff1f090b235e05" in that same attribute), so this is
+// what tells a genuine client row apart from one that only looks like one.
+const MAC_EXACT_RE = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i;
 let lastClickedMac: string | null = null;
 export const setLastClickedMac = (mac: string) => { lastClickedMac = mac.toLowerCase(); };
 
@@ -76,10 +82,32 @@ export function currentPanelMac(root: ParentNode): string | null {
   return m ? m[0].toLowerCase() : lastClickedMac;
 }
 
+// The panel's MAC, strictly from its own text — no lastClickedMac fallback.
+// Used only to decide whether the panel-painting path may bulk-paint (see
+// paintAll) and whether the sweep should treat the panel's imgs as already
+// handled (see sweepAllIcons). currentPanelMac's fallback exists for the
+// assign-icon button/dialog flow (content/panel.ts), where the panel just
+// opened is known by context (the row that was clicked) even before its own
+// text has rendered a MAC — that's a different job from painting, and must
+// not leak into it: the fallback is per-tab global state, but a
+// "See More"-style side pane can list many clients at once, and blindly
+// keying every image in it off whichever client was last clicked elsewhere
+// would either bulk-paint the wrong icon everywhere or block the sweep from
+// keying each image off its own client individually.
+function strictPanelMacOf(root: ParentNode): string | undefined {
+  const panel = root.querySelector('.PROPERTY_PANEL_CLASSNAME');
+  const m = panel?.textContent?.match(MAC_RE);
+  return m ? m[0].toLowerCase() : undefined;
+}
+
 export function paintAll(map: Map<string, string>, root: ParentNode): void {
   let namesChanged = false;
   for (const row of root.querySelectorAll<HTMLTableRowElement>('tr[data-row-id]')) {
-    const mac = row.getAttribute('data-row-id')!.toLowerCase();
+    const id = row.getAttribute('data-row-id');
+    // UniFi reuses tr[data-row-id] for non-client tables (e.g. flows rows
+    // carry a flow id here, not a MAC) — only a MAC-valued id is a client row.
+    if (!id || !MAC_EXACT_RE.test(id)) continue;
+    const mac = id.toLowerCase();
     const nameCell = row.querySelector<HTMLElement>('td[data-column-id="clientName"]');
     const name = nameCell?.textContent?.trim();
     if (name && knownNames.get(mac) !== name) {
@@ -95,13 +123,20 @@ export function paintAll(map: Map<string, string>, root: ParentNode): void {
   if (namesChanged) persistNames();
   const panel = root.querySelector('.PROPERTY_PANEL_CLASSNAME');
   if (panel) {
-    const mac = currentPanelMac(root);
-    const dataUri = mac ? map.get(mac) : undefined;
-    for (const img of panel.querySelectorAll<HTMLImageElement>('img')) {
-      const isDeviceImg = img.src.includes('fingerprint') || img.src.includes('/clients/photos/') || img.dataset.ubicon;
-      if (!isDeviceImg) continue;
-      if (dataUri) paintImg(img, dataUri);
-      else if (img.dataset.ubicon) unpaintImg(img);
+    // Strict only: a panel with no MAC in its own text might not be a
+    // single-client panel at all (e.g. flows' "See More" pane lists many
+    // clients) — painting nothing here and leaving it to the sweep lets
+    // each image in it get keyed off its own client instead of being
+    // bulk-painted (or blocked) by whatever client was last clicked.
+    const mac = strictPanelMacOf(root);
+    if (mac) {
+      const dataUri = map.get(mac);
+      for (const img of panel.querySelectorAll<HTMLImageElement>('img')) {
+        const isDeviceImg = img.src.includes('fingerprint') || img.src.includes('/clients/photos/') || img.dataset.ubicon;
+        if (!isDeviceImg) continue;
+        if (dataUri) paintImg(img, dataUri);
+        else if (img.dataset.ubicon) unpaintImg(img);
+      }
     }
   }
   for (const tab of root.querySelectorAll('[class*="viewSwitcher__"] [class*="switcherTab__"]')) {
@@ -195,7 +230,6 @@ function findAncestorMacByName(start: Element, nameToMac: Map<string, string>): 
 // and entrypoints/bridge.content.ts) — an exact-match MAC recovered straight
 // from React's internal props, which is more reliable than scraping ancestor
 // attributes/text and takes priority over both when present.
-const MAC_EXACT_RE = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i;
 function readStampedMac(img: HTMLImageElement): string | undefined {
   const stamped = img.getAttribute('data-ubicon-mac');
   return stamped && MAC_EXACT_RE.test(stamped) ? stamped.toLowerCase() : undefined;
@@ -212,13 +246,18 @@ export function sweepAllIcons(map: Map<string, string>, root: ParentNode): void 
   for (const img of root.querySelectorAll<HTMLImageElement>('img[data-ubicon]')) candidates.add(img);
 
   const nameToMac = buildReverseNameMap();
+  // Only a strict panel MAC means the panel handler actually bulk-painted
+  // this pass — see strictPanelMacOf / paintAll for why a MAC-less panel
+  // (e.g. flows' "See More" pane) must fall through to this sweep instead.
+  const panelHandledThisPass = strictPanelMacOf(root) !== undefined;
 
   for (const img of candidates) {
     if (img.closest('#ubicon-header-badge, #ubicon-dialog, #ubicon-tip')) continue;
     if (img.getRootNode() instanceof ShadowRoot) continue;
     // Authoritative surfaces already handled above this pass — don't double-process.
-    if (img.closest('tr[data-row-id]')) continue;
-    if (img.closest('.PROPERTY_PANEL_CLASSNAME')) continue;
+    const row = img.closest('tr[data-row-id]');
+    if (row && MAC_EXACT_RE.test(row.getAttribute('data-row-id') ?? '')) continue;
+    if (panelHandledThisPass && img.closest('.PROPERTY_PANEL_CLASSNAME')) continue;
     if (img.closest('[class*="switcherTab__"]')) continue;
 
     const mac = readStampedMac(img) ?? findAncestorMac(img) ?? findAncestorMacByName(img, nameToMac);
