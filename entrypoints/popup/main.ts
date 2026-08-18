@@ -6,6 +6,10 @@ import type { UbiconMsg, UbiconReply } from '../../shared/messages';
 const send = (msg: UbiconMsg) => browser.runtime.sendMessage(msg) as Promise<UbiconReply>;
 const $ = (id: string) => document.getElementById(id)!;
 
+// Filename-safe slug for the icon download: lowercase, runs of
+// non-alphanumeric characters collapsed to a single '-', trimmed.
+const slugify = (label: string) => label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'icon';
+
 async function renderStatus() {
   const cache = await getIndexCache();
   $('db-status').textContent = cache
@@ -35,16 +39,36 @@ async function renderList() {
     row.querySelector('.badge')!.textContent = ref.kind === 'db' ? 'community' : dataUri ? 'custom' : 'custom · icon missing here';
     row.querySelector('button')!.addEventListener('click', async () => { await removeAssignment(mac); renderList(); });
     if (ref.kind === 'custom') {
-      // Community bridge (spec §5): pre-filled suggestion issue on Ubicon-DB
+      // Community bridge (spec §5): pre-filled suggestion issue on Ubicon-DB,
+      // targeting the structured issue form so submissions land in a
+      // consistent, machine-parseable shape. Only device_name (plus title)
+      // is prefilled — vendor/model/category/etc. aren't known here.
       const suggest = document.createElement('a');
       suggest.textContent = '↗';
       suggest.title = 'Suggest this device to the community database';
       suggest.target = '_blank';
-      suggest.href = 'https://github.com/tvirelli/Ubicon-DB/issues/new?title=' +
+      suggest.href = 'https://github.com/tvirelli/Ubicon-DB/issues/new?template=device-suggestion.yml&title=' +
         encodeURIComponent(`Device suggestion: ${ref.label}`) +
-        '&body=' + encodeURIComponent(
-          `**Device:** ${ref.label}\n**Vendor:**\n**Model:**\n**Category:**\n\nAttach the icon image (128×128 PNG, transparent) to this issue.`);
+        '&device_name=' + encodeURIComponent(ref.label);
       row.append(suggest);
+
+      if (dataUri) {
+        // The issue form can't accept a file via URL prefill — the user
+        // drags it into the form's attachment box themselves, so this just
+        // gets the icon out of the extension and into a file for them.
+        const download = document.createElement('a');
+        download.textContent = '⬇';
+        download.title = 'Download icon file for the suggestion';
+        download.href = '#';
+        download.addEventListener('click', e => {
+          e.preventDefault();
+          const a = document.createElement('a');
+          a.href = dataUri;
+          a.download = `${slugify(ref.label)}.png`;
+          a.click();
+        });
+        row.append(download);
+      }
     }
     list.append(row);
   }
