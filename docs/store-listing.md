@@ -64,7 +64,7 @@ The device database is community-maintained and open to contributions
   solely to read that identity data straight off the UniFi page you're
   already viewing, so it knows which client each icon belongs to. This
   script never adds network requests, never sends anything to the
-  extension's isolated world beyond a MAC/name pair, and never transmits
+  extension's isolated world beyond MAC/name pairs, and never transmits
   anything off the page — it only reads data the page itself already
   rendered, for the sole purpose of placing icons correctly.
 
@@ -73,8 +73,10 @@ The device database is community-maintained and open to contributions
 Ubicon does not collect any data, does not run analytics or telemetry, and
 does not talk to any external service other than jsDelivr, which serves the
 public community icon database (a static, unauthenticated file fetch with no
-user data attached). Everything else — your icon assignments, custom icon
-images, and settings — stays in your browser's local storage (and, for
-non-custom-icon assignments, your browser account's own sync, which Ubicon
-does not operate). Nothing about your network, clients, or UniFi controller
-is ever sent anywhere.
+user data attached). Your icon assignments (which device has which icon, for
+both community and custom icons) sync via your browser account's own sync
+feature, which Ubicon does not operate. The custom icon image files you
+upload stay in this browser's local storage only, since they cannot be
+automatically re-fetched on another device — move them between machines with
+Export/Import. Nothing about your network, clients, or UniFi controller is
+ever sent anywhere.
