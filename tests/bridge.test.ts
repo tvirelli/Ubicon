@@ -45,16 +45,70 @@ test('falls back to a shallow scan of nested record values for .mac', () => {
   expect(n).toBe(1);
 });
 
-test('no react props anywhere leaves the icon unstamped, and stays unstamped on a second pass', () => {
+test('a src-unchanged icon is not reprocessed even if props appear later', () => {
   document.body.innerHTML = `<div><span>no props here</span><img src="${IMG_SRC}"></div>`;
+  const div = document.querySelector('div')!;
 
   const n1 = resolveIconMacs(document);
   expect(n1).toBe(0);
   expect(document.querySelector('img')!.hasAttribute('data-ubicon-mac')).toBe(false);
 
+  // Props show up on the ancestor afterwards, but the img's src never
+  // changed — the cache is keyed on src, so this pass must not re-walk it.
+  (div as any)['__reactProps$late1'] = { mac: 'D4:3D:39:80:FC:80' };
+
   const n2 = resolveIconMacs(document);
   expect(n2).toBe(0);
   expect(document.querySelector('img')!.hasAttribute('data-ubicon-mac')).toBe(false);
+});
+
+test('a reused img node is revalidated when its src changes to a different client', () => {
+  const OTHER_SRC = 'https://static.ui.com/fingerprint/0/42_51x51.png';
+  const MAC_B = 'bb:bb:bb:bb:bb:bb';
+  document.body.innerHTML = `<div><img src="${IMG_SRC}"></div>`;
+  const div = document.querySelector('div')!;
+  (div as any)['__reactProps$reuse1'] = { mac: 'D4:3D:39:80:FC:80' };
+
+  const n1 = resolveIconMacs(document);
+  expect(n1).toBe(1);
+  const img = document.querySelector('img') as HTMLImageElement;
+  expect(img.getAttribute('data-ubicon-mac')).toBe(MAC);
+
+  // Virtualized-list style reuse: same <img> node, different client — src
+  // changes to a different remote URL and the ancestor's props swap too.
+  img.src = OTHER_SRC;
+  (div as any)['__reactProps$reuse1'] = { mac: MAC_B.toUpperCase() };
+
+  const n2 = resolveIconMacs(document);
+  expect(n2).toBe(1);
+  expect(img.getAttribute('data-ubicon-mac')).toBe(MAC_B);
+});
+
+test('a throwing getter on one ancestor does not stop the walk from reaching a farther valid one', () => {
+  document.body.innerHTML = `
+    <div id="outer"><div id="inner"><img src="${IMG_SRC}"></div></div>`;
+  const inner = document.getElementById('inner')!;
+  const outer = document.getElementById('outer')!;
+  Object.defineProperty(inner, '__reactProps$throws1', {
+    configurable: true,
+    get() { return { get mac(): string { throw new Error('boom'); } }; },
+  });
+  (outer as any)['__reactProps$outer2'] = { client: { mac: 'D4:3D:39:80:FC:80' } };
+
+  expect(() => resolveIconMacs(document)).not.toThrow();
+
+  expect(document.querySelector('img')!.getAttribute('data-ubicon-mac')).toBe(MAC);
+});
+
+test('resolves a valid props.client.mac exactly two DOM ancestor levels above the img', () => {
+  document.body.innerHTML = `
+    <div id="grandparent"><div id="parent"><img src="${IMG_SRC}"></div></div>`;
+  (document.getElementById('grandparent') as any)['__reactProps$two1'] = { client: { mac: 'D4:3D:39:80:FC:80' } };
+
+  const n = resolveIconMacs(document);
+
+  expect(n).toBe(1);
+  expect(document.querySelector('img')!.getAttribute('data-ubicon-mac')).toBe(MAC);
 });
 
 test('the nearest ancestor with a valid mac wins over a farther one with a different mac', () => {
@@ -68,13 +122,22 @@ test('the nearest ancestor with a valid mac wins over a farther one with a diffe
   expect(document.querySelector('img')!.getAttribute('data-ubicon-mac')).toBe(MAC);
 });
 
-test('an already-stamped icon is skipped and not recounted', () => {
-  document.body.innerHTML = `<div><img src="${IMG_SRC}" data-ubicon-mac="${MAC}"></div>`;
+test('a successfully-stamped icon is not recounted or reprocessed on a later pass with the same src', () => {
+  document.body.innerHTML = `<div><img src="${IMG_SRC}"></div>`;
   const div = document.querySelector('div')!;
-  (div as any)['__reactProps$again1'] = { mac: 'bb:bb:bb:bb:bb:bb' };
+  (div as any)['__reactProps$stable1'] = { mac: 'D4:3D:39:80:FC:80' };
 
-  const n = resolveIconMacs(document);
+  const n1 = resolveIconMacs(document);
+  expect(n1).toBe(1);
+  const img = document.querySelector('img') as HTMLImageElement;
+  expect(img.getAttribute('data-ubicon-mac')).toBe(MAC);
 
-  expect(n).toBe(0);
-  expect(document.querySelector('img')!.getAttribute('data-ubicon-mac')).toBe(MAC);
+  // Ancestor's props swap to a different mac, but the img's src never
+  // changed — the cache should hold, so the original stamp survives
+  // unrecounted rather than being overwritten.
+  (div as any)['__reactProps$stable1'] = { mac: 'bb:bb:bb:bb:bb:bb' };
+
+  const n2 = resolveIconMacs(document);
+  expect(n2).toBe(0);
+  expect(img.getAttribute('data-ubicon-mac')).toBe(MAC);
 });
