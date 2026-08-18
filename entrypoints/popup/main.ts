@@ -37,7 +37,26 @@ async function renderList() {
     row.querySelector('.name')!.textContent = ref.kind === 'db' ? ref.deviceId : ref.label;
     row.querySelector('.mac')!.textContent = mac;
     row.querySelector('.badge')!.textContent = ref.kind === 'db' ? 'community' : dataUri ? 'custom' : 'custom · icon missing here';
-    row.querySelector('button')!.addEventListener('click', async () => { await removeAssignment(mac); renderList(); });
+    const removeBtn = row.querySelector('button')!;
+    let confirmTimer: ReturnType<typeof setTimeout> | undefined;
+    removeBtn.addEventListener('click', async () => {
+      if (!removeBtn.classList.contains('confirm')) {
+        // First click: arm a confirm state rather than removing right away —
+        // custom icons in particular can't be re-downloaded once gone.
+        removeBtn.textContent = 'Remove?';
+        removeBtn.classList.add('confirm');
+        removeBtn.title = 'Click again to remove';
+        confirmTimer = setTimeout(() => {
+          removeBtn.textContent = '✕';
+          removeBtn.classList.remove('confirm');
+          removeBtn.title = 'Remove';
+        }, 4000);
+        return;
+      }
+      clearTimeout(confirmTimer);
+      await removeAssignment(mac);
+      renderList();
+    });
     if (ref.kind === 'custom') {
       // Community bridge (spec §5): opens Ubicon-DB's structured
       // device-suggestion issue form, prefilled with everything the
