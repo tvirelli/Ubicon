@@ -14,7 +14,7 @@ export default defineContentScript({
       requestAnimationFrame(() => {
         scheduled = false;
         paintAll(map, document);
-        ensureModalButton(document);
+        try { ensureModalButton(document); } catch {}
       });
     };
 

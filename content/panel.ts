@@ -96,8 +96,9 @@ export function ensureModalButton(root: ParentNode): void {
     const shadow = host.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
     style.textContent = MODAL_BTN_CSS;
-    shadow.append(style);
-    shadow.insertAdjacentHTML('beforeend', MODAL_BTN_SVG);
+    const holder = document.createElement('span');
+    holder.innerHTML = MODAL_BTN_SVG;
+    shadow.append(style, holder.firstElementChild!);
     host.addEventListener('click', () => {
       const mac = currentPanelMac(document);
       if (mac) openAssignPanel(mac);
