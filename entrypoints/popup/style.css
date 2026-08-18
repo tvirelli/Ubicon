@@ -2,6 +2,11 @@
 @media (prefers-color-scheme: dark) {
   :root { --fg: #e8eaf0; --muted: #9aa1b4; --line: #333949; --bg: #1e222b; }
 }
+/* Guards the `hidden` attribute against any more-specific display rule
+   (e.g. #add-console's `display: block`) silently overriding it — without
+   this, a "hidden" element with its own display rule still renders as an
+   empty, borderless-looking-but-not-actually sliver. */
+[hidden] { display: none !important; }
 body { width: 340px; margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--fg); }
 header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
 h1 { font-size: 14px; margin: 0; flex: 1; }
