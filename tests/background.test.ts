@@ -83,14 +83,31 @@ test('ensureRegisteredOrigins re-registers every stored origin when nothing is c
   ]);
 });
 
-test('ensureRegisteredOrigins skips origins already registered', async () => {
+test('ensureRegisteredOrigins backfills only the missing bridge script when an origin is partially registered', async () => {
+  // 10.71.0.1 already has its primary (painter) script registered, but not
+  // the bridge — e.g. it was registered by a pre-bridge build. Each id is
+  // checked independently, so only the missing bridge script should be
+  // registered for it; 10.71.0.2 has neither yet, so both are registered.
   const registerContentScripts = stubScripting([{ id: 'ubicon-10.71.0.1' }]);
   await fakeBrowser.storage.local.set({ origins: ['https://10.71.0.1', 'https://10.71.0.2'] });
   const n = await ensureRegisteredOrigins();
-  expect(n).toBe(1);
-  expect(registerContentScripts).toHaveBeenCalledTimes(1);
+  expect(n).toBe(2);
+  expect(registerContentScripts).toHaveBeenCalledTimes(2);
+  expect(registerContentScripts).toHaveBeenCalledWith([
+    expect.objectContaining({ id: 'ubicon-bridge-10.71.0.1', world: 'MAIN' }),
+  ]);
   expect(registerContentScripts).toHaveBeenCalledWith([
     expect.objectContaining({ id: 'ubicon-10.71.0.2' }),
     expect.objectContaining({ id: 'ubicon-bridge-10.71.0.2' }),
   ]);
+});
+
+test('ensureRegisteredOrigins skips an origin whose scripts are both already registered', async () => {
+  const registerContentScripts = stubScripting([
+    { id: 'ubicon-10.71.0.1' }, { id: 'ubicon-bridge-10.71.0.1' },
+  ]);
+  await fakeBrowser.storage.local.set({ origins: ['https://10.71.0.1'] });
+  const n = await ensureRegisteredOrigins();
+  expect(n).toBe(0);
+  expect(registerContentScripts).not.toHaveBeenCalled();
 });

@@ -5,7 +5,7 @@ import {
   cacheIcon, getAllAssignments, getCachedIcon, iconKey,
   removeAssignment, setAssignment,
 } from '../shared/storage';
-import { paintIdFor, registrationsForOrigin } from '../shared/registrations';
+import { registrationsForOrigin } from '../shared/registrations';
 
 async function blobToDataUri(blob: Blob): Promise<string> {
   const buf = new Uint8Array(await blob.arrayBuffer());
@@ -73,16 +73,22 @@ export async function hydrateMissingIcons(): Promise<number> {
 // Without this, every reload/update silently strands those origins with no
 // content script until the user manually re-adds them in Options.
 // unifi.ui.com itself is unaffected — it's manifest-declared, not dynamic.
+//
+// Each origin needs two script ids (the isolated-world painter and the
+// MAIN-world bridge — see shared/registrations.ts), and they're checked
+// independently: an origin can end up with only one of the two surviving
+// (e.g. an older build only ever registered the painter), so the other must
+// still get backfilled rather than the whole origin being skipped.
 export async function ensureRegisteredOrigins(): Promise<number> {
   const { origins = [] } = (await browser.storage.local.get('origins')) as { origins?: string[] };
   const existing = await browser.scripting.getRegisteredContentScripts();
   const ids = new Set(existing.map(s => s.id));
   let registered = 0;
   for (const origin of origins) {
-    const hostname = new URL(origin).hostname;
-    if (ids.has(paintIdFor(hostname))) continue;
+    const missing = registrationsForOrigin(origin).filter(script => !ids.has(script.id));
+    if (missing.length === 0) continue;
     try {
-      await browser.scripting.registerContentScripts(registrationsForOrigin(origin));
+      await browser.scripting.registerContentScripts(missing);
       registered++;
     } catch { /* e.g. host permission was revoked — skip this origin, keep going */ }
   }
