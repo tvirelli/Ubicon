@@ -30,7 +30,7 @@ test('ensureModalButton injects the trigger into the title div without throwing'
   expect(document.querySelector('#ubicon-modal-btn')).toBe(btn);
 });
 
-test('ensureModalButton is idempotent — calling twice does not duplicate', () => {
+test('ensureModalButton is idempotent: calling twice does not duplicate', () => {
   changeIconModalDom();
   ensureModalButton(document);
   ensureModalButton(document);
@@ -49,7 +49,7 @@ test('ensureHeaderBadge injects the badge right after the 50px center logo, not 
   expect(smallLogo.nextElementSibling).not.toBe(badge);
 });
 
-test('ensureHeaderBadge is idempotent — calling twice does not duplicate', () => {
+test('ensureHeaderBadge is idempotent: calling twice does not duplicate', () => {
   headerDom();
   ensureHeaderBadge(document);
   ensureHeaderBadge(document);

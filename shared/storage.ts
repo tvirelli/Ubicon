@@ -28,7 +28,7 @@ export const setAssignment = (mac: string, ref: AssignmentRef) =>
 
 export async function removeAssignment(mac: string): Promise<void> {
   // A custom icon's blob has no other owner and can't be re-derived (unlike
-  // a db icon, which just gets re-downloaded next hydrate) — read the
+  // a db icon, which just gets re-downloaded next hydrate); read the
   // assignment before removing it so its blob can be pruned too, rather than
   // leaking forever in storage.local under a mac no assignment points to
   // anymore.
@@ -67,7 +67,7 @@ export async function exportAll(): Promise<ExportFile> {
   return { format: 'ubicon-backup', version: 1, exportedAt: new Date().toISOString(), assignments, customIcons };
 }
 
-// Matches content/state.ts's MAC_EXACT_RE — kept as a separate constant here
+// Matches content/state.ts's MAC_EXACT_RE, kept as a separate constant here
 // rather than imported, since shared/storage.ts must not depend on the
 // content script (content/state.ts already imports from here).
 const MAC_SHAPE_RE = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i;
@@ -83,7 +83,7 @@ function isValidAssignmentRef(v: unknown): v is AssignmentRef {
 export async function importAll(file: ExportFile) {
   if (file?.format !== 'ubicon-backup' || file.version !== 1) throw new Error('Not an Ubicon backup file');
   let assignments = 0, customIcons = 0;
-  // Untrusted input (a user-supplied JSON file) — skip anything that
+  // Untrusted input (a user-supplied JSON file): skip anything that
   // doesn't match the expected shape rather than importing garbage or
   // throwing away the whole file over one bad entry.
   for (const [mac, ref] of Object.entries(file.assignments ?? {})) {

@@ -6,7 +6,7 @@
 // when the user adds an origin) so the two stay in lockstep.
 
 // Script ids are derived from the origin's host (hostname + port, when
-// present) rather than just its hostname — two controllers on the same host
+// present) rather than just its hostname: two controllers on the same host
 // but different ports (e.g. https://10.71.0.1:8443 and https://10.71.0.1:8444)
 // are distinct origins and must not collide on a single registered-script id.
 // ':' isn't valid in a scripting.RegisteredContentScript id, so it's

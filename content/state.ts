@@ -9,7 +9,7 @@ const MAC_RE = /\b([0-9a-f]{2}:){5}[0-9a-f]{2}\b/i;
 // \w character so \b never matches there. The colon-pair shape is distinctive
 // enough on its own; only the trailing boundary is needed.
 const MAC_IN_TEXT_RE = /([0-9a-f]{2}:){5}[0-9a-f]{2}\b/i;
-// Strict, whole-string match — used wherever a value (a data-row-id, a
+// Strict, whole-string match: used wherever a value (a data-row-id, a
 // bridge stamp) must itself BE a MAC, not merely contain one. UniFi reuses
 // tr[data-row-id] for non-client tables too (e.g. flows rows carry a flow
 // id like "6a849daaddff1f090b235e05" in that same attribute), so this is
@@ -17,7 +17,7 @@ const MAC_IN_TEXT_RE = /([0-9a-f]{2}:){5}[0-9a-f]{2}\b/i;
 const MAC_EXACT_RE = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i;
 let lastClickedMac: string | null = null;
 // UniFi reuses tr[data-row-id] for non-client tables (flows rows carry a
-// flow id there, not a MAC — see MAC_EXACT_RE's own comment) — the content
+// flow id there, not a MAC, see MAC_EXACT_RE's own comment), so the content
 // script's click listener passes that attribute straight through, so a
 // non-MAC value must be ignored here rather than clobbering the last
 // genuine client MAC clicked elsewhere.
@@ -59,7 +59,7 @@ export async function hydrateNames(): Promise<void> {
 // Merges [mac, name] pairs harvested by the MAIN-world bridge (see
 // content/bridge-core.ts's harvestNameMacPairs) into the known-names map.
 // Returns true if anything was actually added or changed, so callers can
-// decide whether a repaint is worth triggering — re-merging the same pairs
+// decide whether a repaint is worth triggering; re-merging the same pairs
 // on a later pass (the common case, since the bridge harvests on every
 // resolve) is a no-op and reports no change.
 export function mergeNames(pairs: Array<[string, string]>): boolean {
@@ -78,7 +78,7 @@ export async function loadOverlayMap(): Promise<Map<string, string>> {
   const assignments = await getAllAssignments();
   const entries = Object.entries(assignments);
   // One batched storage.local.get for every icon this page needs, instead of
-  // a get-per-assignment — matters once a user has assigned more than a
+  // a get-per-assignment: matters once a user has assigned more than a
   // handful of devices, since each storage.local round-trip has fixed
   // overhead independent of key count.
   const keyFor = (ref: AssignmentRef) => `icon:${iconKey(ref)}`;
@@ -99,13 +99,13 @@ export function currentPanelMac(root: ParentNode): string | null {
   return m ? m[0].toLowerCase() : lastClickedMac;
 }
 
-// The panel's MAC, strictly from its own text — no lastClickedMac fallback.
+// The panel's MAC, strictly from its own text, with no lastClickedMac fallback.
 // Used only to decide whether the panel-painting path may bulk-paint (see
 // paintAll) and whether the sweep should treat the panel's imgs as already
 // handled (see sweepAllIcons). currentPanelMac's fallback exists for the
 // assign-icon button/dialog flow (content/panel.ts), where the panel just
 // opened is known by context (the row that was clicked) even before its own
-// text has rendered a MAC — that's a different job from painting, and must
+// text has rendered a MAC; that's a different job from painting, and must
 // not leak into it: the fallback is per-tab global state, but a
 // "See More"-style side pane can list many clients at once, and blindly
 // keying every image in it off whichever client was last clicked elsewhere
@@ -122,7 +122,7 @@ export function paintAll(map: Map<string, string>, root: ParentNode): void {
   for (const row of root.querySelectorAll<HTMLTableRowElement>('tr[data-row-id]')) {
     const id = row.getAttribute('data-row-id');
     // UniFi reuses tr[data-row-id] for non-client tables (e.g. flows rows
-    // carry a flow id here, not a MAC) — only a MAC-valued id is a client row.
+    // carry a flow id here, not a MAC); only a MAC-valued id is a client row.
     if (!id || !MAC_EXACT_RE.test(id)) continue;
     const mac = id.toLowerCase();
     const nameCell = row.querySelector<HTMLElement>('td[data-column-id="clientName"]');
@@ -142,7 +142,7 @@ export function paintAll(map: Map<string, string>, root: ParentNode): void {
   if (panel) {
     // Strict only: a panel with no MAC in its own text might not be a
     // single-client panel at all (e.g. flows' "See More" pane lists many
-    // clients) — painting nothing here and leaving it to the sweep lets
+    // clients); painting nothing here and leaving it to the sweep lets
     // each image in it get keyed off its own client instead of being
     // bulk-painted (or blocked) by whatever client was last clicked.
     const mac = strictPanelMacOf(root);
@@ -181,7 +181,7 @@ function collectMacs(text: string): Set<string> {
 
 // Walks up from an icon looking for the single MAC that identifies its
 // client. Returns undefined when no unambiguous MAC is found (zero matches
-// after exhausting the walk, or more than one distinct MAC at any level) —
+// after exhausting the walk, or more than one distinct MAC at any level);
 // callers must treat undefined as "leave this candidate untouched".
 function findAncestorMac(start: Element): string | undefined {
   let el: Element | null = start.parentElement;
@@ -208,7 +208,7 @@ function findAncestorMac(start: Element): string | undefined {
 }
 
 // Builds name -> mac from the names captured off clients-table rows,
-// excluding any name shared by more than one mac (ambiguity guard) —
+// excluding any name shared by more than one mac (ambiguity guard);
 // mirrors the multi-MAC abandonment rule in findAncestorMac.
 function buildReverseNameMap(): Map<string, string> {
   const macsByName = new Map<string, Set<string>>();
@@ -227,7 +227,7 @@ function buildReverseNameMap(): Map<string, string> {
 // never emit the MAC anywhere nearby (e.g. dashboard widgets, insights/flows
 // pages). Walks up to 8 ancestor levels looking for an element whose exact,
 // trimmed text matches a known (unambiguous) display name. No partial
-// matching, no case folding — names are displayed verbatim. First hit wins.
+// matching, no case folding: names are displayed verbatim. First hit wins.
 function findAncestorMacByName(start: Element, nameToMac: Map<string, string>): string | undefined {
   let el: Element | null = start.parentElement;
   let levels = 0;
@@ -244,7 +244,7 @@ function findAncestorMacByName(start: Element, nameToMac: Map<string, string>): 
 }
 
 // A stamp left by the MAIN-world React props bridge (see content/bridge-core.ts
-// and entrypoints/bridge.content.ts) — an exact-match MAC recovered straight
+// and entrypoints/bridge.content.ts): an exact-match MAC recovered straight
 // from React's internal props, which is more reliable than scraping ancestor
 // attributes/text and takes priority over both when present.
 function readStampedMac(img: HTMLImageElement): string | undefined {
@@ -264,21 +264,21 @@ export function sweepAllIcons(map: Map<string, string>, root: ParentNode): void 
 
   const nameToMac = buildReverseNameMap();
   // Only a strict panel MAC means the panel handler actually bulk-painted
-  // this pass — see strictPanelMacOf / paintAll for why a MAC-less panel
+  // this pass; see strictPanelMacOf / paintAll for why a MAC-less panel
   // (e.g. flows' "See More" pane) must fall through to this sweep instead.
   const panelHandledThisPass = strictPanelMacOf(root) !== undefined;
 
   for (const img of candidates) {
     if (img.closest('#ubicon-header-badge, #ubicon-dialog, #ubicon-tip')) continue;
     if (img.getRootNode() instanceof ShadowRoot) continue;
-    // Authoritative surfaces already handled above this pass — don't double-process.
+    // Authoritative surfaces already handled above this pass; don't double-process.
     const row = img.closest('tr[data-row-id]');
     if (row && MAC_EXACT_RE.test(row.getAttribute('data-row-id') ?? '')) continue;
     if (panelHandledThisPass && img.closest('.PROPERTY_PANEL_CLASSNAME')) continue;
     if (img.closest('[class*="switcherTab__"]')) continue;
 
     const mac = readStampedMac(img) ?? findAncestorMac(img) ?? findAncestorMacByName(img, nameToMac);
-    if (!mac) continue; // not found, or ambiguous — leave untouched
+    if (!mac) continue; // not found, or ambiguous, leave untouched
 
     const dataUri = map.get(mac);
     if (dataUri) paintImg(img, dataUri);

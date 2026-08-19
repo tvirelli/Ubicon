@@ -88,7 +88,7 @@ test('setLastClickedMac ignores a non-MAC value (e.g. a flows row id) rather tha
   uniFiDom();
   document.querySelector('.PROPERTY_PANEL_CLASSNAME span')!.textContent = 'no mac here';
   setLastClickedMac('cc:cc:cc:cc:cc:cc');
-  setLastClickedMac('6a849daaddff1f090b235e05'); // flow row id, not a MAC — must be ignored
+  setLastClickedMac('6a849daaddff1f090b235e05'); // flow row id, not a MAC, must be ignored
   expect(currentPanelMac(document)).toBe('cc:cc:cc:cc:cc:cc');
 });
 
@@ -160,7 +160,7 @@ test('sweep name fallback abandons a name shared by two macs', () => {
 });
 
 test('sweep uses a bridge-stamped data-ubicon-mac as the top-priority key', () => {
-  // No MAC and no known name anywhere in the ancestor chain — only the
+  // No MAC and no known name anywhere in the ancestor chain; only the
   // React-props bridge's stamp identifies the client.
   document.body.innerHTML = `
     <div class="somePage"><div class="widget">
@@ -204,7 +204,7 @@ test('a flows row (non-MAC row id) is painted via the sweep name fallback', () =
 
 test('a flows row with an unrecognized display name stays untouched', () => {
   flowsRowDom();
-  // No knownNames entry for NAME — the sweep's name fallback has nothing to
+  // No knownNames entry for NAME; the sweep's name fallback has nothing to
   // match, and there's no MAC anywhere for the ordinary ancestor walk either.
   paintAll(new Map([[MAC, DATA]]), document);
   const img = document.querySelector('img') as HTMLImageElement;
@@ -229,7 +229,7 @@ test('a MAC-valued client row is still painted by the row handler and correctly 
     </tbody></table>`;
   // If the sweep wrongly processed this row's img (the skip rule failing to
   // recognize a MAC-valued row), the name fallback would key it to
-  // OTHER_MAC instead of the row's own MAC — proving the skip still holds.
+  // OTHER_MAC instead of the row's own MAC, proving the skip still holds.
   __setNamesForTests(new Map([[OTHER_MAC, NAME]]));
   const map = new Map([[MAC, DATA], [OTHER_MAC, OTHER_DATA]]);
 

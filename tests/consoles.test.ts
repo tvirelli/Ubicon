@@ -6,7 +6,7 @@ beforeEach(() => { fakeBrowser.reset(); });
 
 // wxt/testing/fake-browser exposes `browser.scripting.*`/`browser.permissions.*`
 // methods, but they throw MockNotImplementedError when called (no in-memory
-// fake exists for these namespaces) — so per-test the API is stubbed with
+// fake exists for these namespaces), so per-test the API is stubbed with
 // vi.fn() rather than relying on fakeBrowser's own implementation.
 function stubScripting(registered: Array<{ id: string }>) {
   const registerContentScripts = vi.fn().mockResolvedValue(undefined);

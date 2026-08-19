@@ -2,7 +2,7 @@ import { resolveIconMacs, harvestNameMacPairs } from '../content/bridge-core';
 
 // Runs in the page's MAIN world (not the extension's isolated world), so it
 // can see React's internal fiber props on the live DOM nodes. It never talks
-// to the extension directly — the isolated-world content script asks it to
+// to the extension directly: the isolated-world content script asks it to
 // run via a DOM CustomEvent and reads the result back the same way, since
 // that's the only channel available between the two worlds.
 export default defineContentScript({
@@ -12,7 +12,7 @@ export default defineContentScript({
   main() {
     document.addEventListener('ubicon:resolve', () => {
       const n = resolveIconMacs(document);
-      // Plain array of 2-string arrays — structured-clone safe across the
+      // Plain array of 2-string arrays: structured-clone safe across the
       // CustomEvent boundary between the MAIN and isolated worlds.
       const pairs = harvestNameMacPairs(document);
       document.dispatchEvent(new CustomEvent('ubicon:resolved', { detail: { n, pairs } }));

@@ -28,7 +28,7 @@ async function renderList() {
   list.innerHTML = '';
   for (const mac of macs) {
     const ref = assignments[mac];
-    if (!ref) continue; // keys come straight from Object.keys(assignments) above — narrows for TS only
+    if (!ref) continue; // keys come straight from Object.keys(assignments) above, narrows for TS only
     const dataUri = await getCachedIcon(iconKey(ref));
     const row = document.createElement('div');
     row.className = 'row';
@@ -42,7 +42,7 @@ async function renderList() {
     let confirmTimer: ReturnType<typeof setTimeout> | undefined;
     removeBtn.addEventListener('click', async () => {
       if (!removeBtn.classList.contains('confirm')) {
-        // First click: arm a confirm state rather than removing right away —
+        // First click: arm a confirm state rather than removing right away;
         // custom icons in particular can't be re-downloaded once gone.
         removeBtn.textContent = 'Remove?';
         removeBtn.classList.add('confirm');
@@ -61,7 +61,7 @@ async function renderList() {
     if (ref.kind === 'custom') {
       // Community bridge (spec §5): opens Ubicon-DB's structured
       // device-suggestion issue form, prefilled with everything the
-      // extension actually knows about this device — just its display
+      // extension actually knows about this device: just its display
       // name. Vendor/model/category stay blank; a custom (non-database)
       // device has no such data to prefill from.
       const suggest = document.createElement('a');
@@ -74,7 +74,7 @@ async function renderList() {
       row.append(suggest);
 
       if (dataUri) {
-        // The issue form can't accept a file via URL prefill — the user
+        // The issue form can't accept a file via URL prefill; the user
         // drags it into the form's attachment box themselves, so this just
         // gets the icon out of the extension and into a file for them.
         const download = document.createElement('a');
@@ -138,7 +138,7 @@ async function setupAddConsoleButton() {
   btn.textContent = `Add this console (${origin})`;
   btn.hidden = false;
   btn.addEventListener('click', async () => {
-    // Called directly here (this click IS the user gesture) — see
+    // Called directly here (this click IS the user gesture); see
     // shared/consoles.ts's addConsoleOrigin for why that matters.
     const result = await addConsoleOrigin(tab.url);
     if (result === 'added') {
