@@ -73,10 +73,10 @@ export async function hydrateMissingIcons(): Promise<number> {
 // (local UniFi controllers they've granted access to) persists across that.
 // Without this, every reload/update silently strands those origins with no
 // content script until the user manually re-adds them in Options.
-// unifi.ui.com itself is unaffected — it's manifest-declared, not dynamic.
+// unifi.ui.com itself is unaffected, since it's manifest-declared, not dynamic.
 //
 // Each origin needs two script ids (the isolated-world painter and the
-// MAIN-world bridge — see shared/registrations.ts), and they're checked
+// MAIN-world bridge, see shared/registrations.ts), and they're checked
 // independently: an origin can end up with only one of the two surviving
 // (e.g. an older build only ever registered the painter), so the other must
 // still get backfilled rather than the whole origin being skipped.
@@ -87,7 +87,7 @@ export async function ensureRegisteredOrigins(): Promise<number> {
   let registered = 0;
   for (const origin of origins) {
     try {
-      // registrationsForOrigin parses `origin` with `new URL(...)` — a
+      // registrationsForOrigin parses `origin` with `new URL(...)`: a
       // malformed stored origin throws synchronously, and that must not
       // abort the backfill loop for every other (valid) origin, so the call
       // lives inside this try alongside the registration call it feeds.
@@ -95,7 +95,7 @@ export async function ensureRegisteredOrigins(): Promise<number> {
       if (missing.length === 0) continue;
       await browser.scripting.registerContentScripts(missing);
       registered++;
-    } catch { /* e.g. malformed origin, or host permission was revoked — skip, keep going */ }
+    } catch { /* e.g. malformed origin, or host permission was revoked; skip, keep going */ }
   }
   return registered;
 }
@@ -103,14 +103,14 @@ export async function ensureRegisteredOrigins(): Promise<number> {
 const ADD_CONSOLE_MENU_ID = 'ubicon-add-console';
 
 // Best-effort UX: briefly flashes the toolbar badge to confirm what
-// happened, then clears it. Never worth failing the click over — every
+// happened, then clears it. Never worth failing the click over: every
 // browser call here is wrapped/chained so neither a synchronous throw nor
 // an async rejection (e.g. the tab closed before the timeout fires) can
 // produce an unhandled rejection.
 function flashBadge(text: string): void {
   try {
     browser.action.setBadgeText({ text }).catch(() => {});
-  } catch { /* action API unavailable — degrade silently */ }
+  } catch { /* action API unavailable, degrade silently */ }
   setTimeout(() => {
     try {
       browser.action.setBadgeText({ text: '' }).catch(() => {});
@@ -133,20 +133,20 @@ export default defineBackground(() => {
     try {
       // 'action' is the correct context on both Chrome and Firefox MV3.
       // Note: contextMenus.create returns the new menu id synchronously on
-      // Chrome (not a Promise) — the try/catch alone covers a synchronous
+      // Chrome (not a Promise): the try/catch alone covers a synchronous
       // throw, e.g. re-creating an id that already exists on an update.
       browser.contextMenus.create({ id: ADD_CONSOLE_MENU_ID, title: 'Add Current Console', contexts: ['action'] });
-    } catch { /* e.g. re-created on an update — ignore */ }
+    } catch { /* e.g. re-created on an update, ignore */ }
   });
   browser.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId !== ADD_CONSOLE_MENU_ID) return;
     // Called synchronously (no await before it) so addConsoleOrigin's own
     // permissions.request still runs within this click's user-gesture
-    // context — see the comment there for the one await that's allowed
+    // context: see the comment there for the one await that's allowed
     // to precede it.
     addConsoleOrigin(tab?.url).then(result => {
       if (result === 'added' && tab?.id != null) browser.tabs.reload(tab.id).catch(() => {});
-      // Nothing worth flashing for 'invalid'/'already' — only the two
+      // Nothing worth flashing for 'invalid'/'already': only the two
       // outcomes the user couldn't have predicted from the menu alone.
       if (result === 'added') flashBadge('✓');
       else if (result === 'denied') flashBadge('!');

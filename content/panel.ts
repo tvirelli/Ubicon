@@ -91,7 +91,7 @@ export function ensureModalButton(root: ParentNode): void {
     if (!title || title.querySelector(`#${MODAL_BTN_HOST_ID}`)) continue;
     const host = document.createElement('span');
     host.id = MODAL_BTN_HOST_ID;
-    host.title = 'Ubicon — community device icons';
+    host.title = 'Ubicon: community device icons';
     host.style.cssText = 'display:inline-flex;align-items:center;align-self:flex-start;height:20px;margin-left:12px;cursor:pointer;';
     const shadow = host.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
@@ -145,7 +145,7 @@ export function openAssignPanel(mac: string): void {
   const dlg = document.createElement('div');
   dlg.className = 'dlg' + (isDark() ? ' dark' : '');
   dlg.innerHTML = `
-    <header><span>Ubicon — assign icon</span><button data-x aria-label="Close">✕</button></header>
+    <header><span>Ubicon: assign icon</span><button data-x aria-label="Close">✕</button></header>
     <div class="tabs">
       <button data-tab="db" class="on">Community database</button>
       <button data-tab="custom">Custom icon</button>
@@ -167,13 +167,13 @@ export function openAssignPanel(mac: string): void {
 
   const finish = async (reply: UbiconReply, verb: string) => {
     if (!reply.ok) { toast(`Ubicon: ${reply.error}`); return; }
-    // Removal is undoing an assignment, not learning to make one — the
+    // Removal is undoing an assignment, not learning to make one, so the
     // "set the device's name" tip doesn't apply and shouldn't fire (or
     // consume the one-time tipShown flag) on that path.
     if (verb !== 'removed') {
       const flags = await browser.storage.local.get('tipShown');
       if (!flags.tipShown) {
-        showTip(`Icon ${verb}. Tip: set the device's name in UniFi's own Settings tab — Ubicon never changes UniFi settings.`);
+        showTip(`Icon ${verb}. Tip: set the device's name in UniFi's own Settings tab; Ubicon never changes UniFi settings.`);
       }
     }
     close();
@@ -196,9 +196,9 @@ export function openAssignPanel(mac: string): void {
     }
     const render = async (query: string) => {
       const reply = await send({ type: 'search', query });
-      if (!reply.ok) { list.innerHTML = `<div class="msg">Database unavailable — check your connection and try Refresh in the Ubicon popup.</div>`; return; }
+      if (!reply.ok) { list.innerHTML = `<div class="msg">Database unavailable, check your connection and try Refresh in the Ubicon popup.</div>`; return; }
       const results = (reply as { results?: DeviceRecord[] }).results ?? [];
-      list.innerHTML = results.length ? '' : '<div class="msg">No matches. Add it to the community database — see the Ubicon popup for a link.</div>';
+      list.innerHTML = results.length ? '' : '<div class="msg">No matches. Add it to the community database, see the Ubicon popup for a link.</div>';
       for (const d of results) {
         const item = document.createElement('div');
         item.className = 'item';
@@ -222,7 +222,7 @@ export function openAssignPanel(mac: string): void {
       <img class="preview" hidden alt="Preview">
       <input type="text" placeholder="Label (e.g. Garage sensor)" maxlength="40">
       <button class="save" disabled>Save custom icon</button>
-      <div class="msg">Stays on this computer only — never uploaded anywhere. Use Export in the Ubicon popup to move it to another machine.</div>
+      <div class="msg">Stays on this computer only, never uploaded anywhere. Use Export in the Ubicon popup to move it to another machine.</div>
     </div>`;
     const file = body.querySelector('input[type=file]') as HTMLInputElement;
     const preview = body.querySelector('.preview') as HTMLImageElement;

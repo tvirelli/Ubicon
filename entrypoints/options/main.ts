@@ -29,8 +29,8 @@ $('add').addEventListener('submit', async e => {
     const result = await addConsoleOrigin(url.origin);
     if (result === 'denied') { msg.textContent = 'Permission was not granted.'; return; }
     if (result === 'already') { msg.textContent = `${url.origin} is already added.`; return; }
-    // 'invalid' can't happen here — the protocol/parse check above already
-    // guards it — but addConsoleOrigin's return type still includes it.
+    // 'invalid' can't happen here (the protocol/parse check above already
+    // guards it), but addConsoleOrigin's return type still includes it.
     msg.textContent = `Added ${url.origin}. Reload your UniFi tab.`;
     urlInput.value = '';
     renderList();

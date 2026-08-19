@@ -56,7 +56,7 @@ test('hydrateMissingIcons downloads icons for synced db assignments', async () =
 
 // wxt/testing/fake-browser exposes `browser.scripting.*` methods, but they
 // throw MockNotImplementedError when called (no in-memory fake exists for
-// this namespace) — so per-test the API is stubbed with vi.fn() rather than
+// this namespace), so per-test the API is stubbed with vi.fn() rather than
 // relying on fakeBrowser's own implementation.
 function stubScripting(registered: Array<{ id: string }>) {
   const registerContentScripts = vi.fn().mockResolvedValue(undefined);
@@ -85,7 +85,7 @@ test('ensureRegisteredOrigins re-registers every stored origin when nothing is c
 
 test('ensureRegisteredOrigins backfills only the missing bridge script when an origin is partially registered', async () => {
   // 10.71.0.1 already has its primary (painter) script registered, but not
-  // the bridge — e.g. it was registered by a pre-bridge build. Each id is
+  // the bridge, e.g. it was registered by a pre-bridge build. Each id is
   // checked independently, so only the missing bridge script should be
   // registered for it; 10.71.0.2 has neither yet, so both are registered.
   const registerContentScripts = stubScripting([{ id: 'ubicon-10.71.0.1' }]);
@@ -114,7 +114,7 @@ test('ensureRegisteredOrigins skips an origin whose scripts are both already reg
 
 test('ensureRegisteredOrigins skips a malformed stored origin without aborting the backfill for the rest', async () => {
   // registrationsForOrigin parses each origin with `new URL(...)`, which
-  // throws synchronously for a malformed value — that must not abort the
+  // throws synchronously for a malformed value; that must not abort the
   // whole loop and strand every other (valid) stored origin unregistered.
   const registerContentScripts = stubScripting([]);
   await fakeBrowser.storage.local.set({ origins: ['not a url', 'https://10.71.0.2'] });

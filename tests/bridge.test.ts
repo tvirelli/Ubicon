@@ -6,7 +6,7 @@ const MAC = 'd4:3d:39:80:fc:80';
 const IMG_SRC = 'https://static.ui.com/fingerprint/0/9_51x51.png';
 
 // Fiber nodes are plain objects linked by .return, exactly how the resolver
-// walks them — there's no real React runtime under happy-dom, so tests
+// walks them; there's no real React runtime under happy-dom, so tests
 // construct the chain by hand rather than mounting real components.
 type FakeFiber = { memoizedProps?: unknown; return?: FakeFiber | null };
 
@@ -39,7 +39,7 @@ test('stamps the mac from a direct props.mac', () => {
 test('falls back to a shallow scan of nested record values for .mac', () => {
   document.body.innerHTML = `<div><img src="${IMG_SRC}"></div>`;
   const div = document.querySelector('div')!;
-  // Not one of the direct paths (mac/client/data/item/row) — only found via
+  // Not one of the direct paths (mac/client/data/item/row); only found via
   // the shallow pass over the props object's own values.
   (div as any)['__reactProps$shallow1'] = { device: { mac: 'D4:3D:39:80:FC:80' } };
 
@@ -59,7 +59,7 @@ test('a src-unchanged icon is not reprocessed even if props appear later', () =>
   expect(document.querySelector('img')!.hasAttribute('data-ubicon-mac')).toBe(false);
 
   // Props show up on the ancestor afterwards, but the img's src never
-  // changed — the cache is keyed on src, so this pass must not re-walk it.
+  // changed; the cache is keyed on src, so this pass must not re-walk it.
   (div as any)['__reactProps$late1'] = { mac: 'D4:3D:39:80:FC:80' };
 
   const n2 = resolveIconMacs(document);
@@ -79,7 +79,7 @@ test('a reused img node is revalidated when its src changes to a different clien
   const img = document.querySelector('img') as HTMLImageElement;
   expect(img.getAttribute('data-ubicon-mac')).toBe(MAC);
 
-  // Virtualized-list style reuse: same <img> node, different client — src
+  // Virtualized-list style reuse: same <img> node, different client; src
   // changes to a different remote URL and the ancestor's props swap too.
   img.src = OTHER_SRC;
   (div as any)['__reactProps$reuse1'] = { mac: MAC_B.toUpperCase() };
@@ -138,7 +138,7 @@ test('a successfully-stamped icon is not recounted or reprocessed on a later pas
   expect(img.getAttribute('data-ubicon-mac')).toBe(MAC);
 
   // Ancestor's props swap to a different mac, but the img's src never
-  // changed — the cache should hold, so the original stamp survives
+  // changed; the cache should hold, so the original stamp survives
   // unrecounted rather than being overwritten.
   (div as any)['__reactProps$stable1'] = { mac: 'bb:bb:bb:bb:bb:bb' };
 
@@ -150,7 +150,7 @@ test('a successfully-stamped icon is not recounted or reprocessed on a later pas
 test('stamps a mac found via the fiber walk when the DOM react-props carry nothing useful', () => {
   document.body.innerHTML = `<div><img src="${IMG_SRC}"></div>`;
   const img = document.querySelector('img') as HTMLImageElement;
-  // No __reactProps$ anywhere — only a fiber chain, whose direct row-level
+  // No __reactProps$ anywhere; only a fiber chain, whose direct row-level
   // memoizedProps carries the client_mac field the DOM props never expose.
   const rowFiber: FakeFiber = { memoizedProps: { client_mac: 'D4:3D:39:80:FC:80' }, return: null };
   const imgFiber: FakeFiber = { memoizedProps: { src: IMG_SRC }, return: rowFiber };

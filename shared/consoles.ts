@@ -1,8 +1,8 @@
 // Local-controller "console" origins the user has granted Ubicon access to
 // beyond the manifest-declared https://unifi.ui.com. Three entry points all
-// need the exact same add/remove/list behavior — Options' form, the toolbar
+// need the exact same add/remove/list behavior: Options' form, the toolbar
 // icon's right-click "Add Current Console", and the popup's own Consoles
-// section — so it lives here once rather than being reimplemented per entry
+// section, so it lives here once rather than being reimplemented per entry
 // point.
 import { browser } from 'wxt/browser';
 import { bridgeIdFor, paintIdFor, registrationsForOrigin } from './registrations';
@@ -31,8 +31,8 @@ export async function addConsoleOrigin(url: string | undefined): Promise<AddCons
 
   // Valid only when called synchronously from a user gesture (a menu click,
   // a popup button click). One quick storage.local read (the already-stored
-  // check just above) precedes this — that ordering is spec-required, not
-  // incidental — but callers must not add any further awaits before this
+  // check just above) precedes this; that ordering is spec-required, not
+  // incidental, but callers must not add any further awaits before this
   // point, or browsers may no longer consider the request gesture-triggered.
   const granted = await browser.permissions.request({ origins: [origin + '/*'] });
   if (!granted) return 'denied';
@@ -40,7 +40,7 @@ export async function addConsoleOrigin(url: string | undefined): Promise<AddCons
   // Reuses the same shared registration shape ensureRegisteredOrigins uses,
   // so all callers stay in lockstep.
   await browser.scripting.registerContentScripts(registrationsForOrigin(origin)).catch(async err => {
-    if (String(err).includes('Duplicate')) return; // already registered — fine
+    if (String(err).includes('Duplicate')) return; // already registered, fine
     throw err;
   });
 

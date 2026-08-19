@@ -6,15 +6,15 @@ export default defineConfig({
   // MV2-by-default behavior for firefox.
   manifestVersion: 3,
   manifest: ({ browser }) => ({
-    name: 'Ubicon — Device Icons for UniFi',
+    name: 'Ubicon - Device Icons for UniFi',
     description:
-      'Assign community and custom icons to network clients that UniFi does not recognize. Visual overlay only — never touches your UniFi settings.',
+      'Assign community and custom icons to network clients that UniFi does not recognize. Visual overlay only, never touches your UniFi settings.',
     permissions: ['storage', 'unlimitedStorage', 'alarms', 'scripting', 'contextMenus', 'activeTab'],
     host_permissions: [
       'https://unifi.ui.com/*',
       'https://cdn.jsdelivr.net/*',
     ],
-    // User grants local-controller origins at runtime, on every target — WXT
+    // User grants local-controller origins at runtime, on every target; WXT
     // converts this to each browser's MV3 equivalent as needed.
     optional_host_permissions: ['*://*/*'],
     icons: { 16: '/icon/16.png', 32: '/icon/32.png', 48: '/icon/48.png', 96: '/icon/96.png', 128: '/icon/128.png' },

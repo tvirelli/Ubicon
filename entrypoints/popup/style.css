@@ -3,7 +3,7 @@
   :root { --fg: #e8eaf0; --muted: #9aa1b4; --line: #333949; --bg: #1e222b; }
 }
 /* Guards the `hidden` attribute against any more-specific display rule
-   (e.g. #add-console's `display: block`) silently overriding it — without
+   (e.g. #add-console's `display: block`) silently overriding it; without
    this, a "hidden" element with its own display rule still renders as an
    empty, borderless-looking-but-not-actually sliver. */
 [hidden] { display: none !important; }

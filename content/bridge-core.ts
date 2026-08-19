@@ -1,5 +1,5 @@
 // Pure resolver core for the MAIN-world React props bridge. No browser
-// extension APIs here — this file is exercised directly by unit tests under
+// extension APIs here: this file is exercised directly by unit tests under
 // happy-dom, and is also imported (unmodified) by the MAIN-world content
 // script entrypoint that actually has access to React's internal fiber
 // props on the live UniFi page.
@@ -9,7 +9,7 @@
 // starts with "__reactProps$" (the suffix is a per-render random id), and
 // the fiber node itself under a sibling property starting with
 // "__reactFiber$". The DOM-attached props are often a far more reliable way
-// to recover a client's MAC than scraping ancestor attributes/text — but on
+// to recover a client's MAC than scraping ancestor attributes/text, but on
 // some pages (e.g. flows) they carry only styling props, and the real
 // client record lives many levels up the *fiber* tree (via fiber.return),
 // either as a per-row component's own props or as one entry in a list
@@ -21,7 +21,7 @@ function isValidMac(value: unknown): value is string {
   return typeof value === 'string' && MAC_EXACT_RE.test(value);
 }
 
-// A plain, non-array, non-React-element object — i.e. a plausible "record"
+// A plain, non-array, non-React-element object: i.e. a plausible "record"
 // value worth checking for a nested .mac field. React elements are tagged
 // with a $$typeof symbol/string; we skip those so we never walk back into
 // the render tree itself.
@@ -29,10 +29,10 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value) && !('$$typeof' in value);
 }
 
-// Reads whatever mac-shaped value it can off a props object — used both for
+// Reads whatever mac-shaped value it can off a props object: used both for
 // the DOM-attached __reactProps$ object and a fiber's memoizedProps, since
-// both can carry the same per-row shapes. Deliberately unguarded internally
-// — UniFi's props can carry arbitrary getters, and a throwing one anywhere
+// both can carry the same per-row shapes. Deliberately unguarded internally,
+// since UniFi's props can carry arbitrary getters, and a throwing one anywhere
 // in here (direct paths or the shallow scan) is the caller's problem to
 // contain, not this function's. See findReactMac/findFiberMac, which wrap
 // each call so one bad ancestor/fiber is skipped rather than aborting the
@@ -76,7 +76,7 @@ type FiberNode = { return?: FiberNode | null; memoizedProps?: unknown };
 //
 // Each ancestor's extraction is wrapped individually: UniFi's props objects
 // can carry arbitrary getters, and a throwing one at one level must not
-// stop the walk from reaching a perfectly good ancestor farther up — it
+// stop the walk from reaching a perfectly good ancestor farther up; it
 // just means this particular level contributed nothing.
 function findReactMac(start: Element): string | undefined {
   let el: Element | null = start.parentElement;
@@ -86,7 +86,7 @@ function findReactMac(start: Element): string | undefined {
       const mac = extractMacFromProps(reactPropsOf(el));
       if (mac) return mac;
     } catch {
-      // Throwing getter on this ancestor's props — treat as "nothing here"
+      // Throwing getter on this ancestor's props: treat as "nothing here"
       // and keep walking; don't let it take down the whole resolution.
     }
     el = el.parentElement;
@@ -97,7 +97,7 @@ function findReactMac(start: Element): string | undefined {
 
 // Fallback for pages where the DOM-attached __reactProps$ only ever carries
 // styling props (nothing recoverable), but a component higher up the
-// *fiber* tree — not necessarily attached to any DOM node in between —
+// *fiber* tree, not necessarily attached to any DOM node in between,
 // still renders that row with the client record as its own props. Walks up
 // to 12 fiber.return hops from the icon's own fiber. Wrapped as a whole:
 // fiber shapes are internal React implementation detail we have no control
@@ -112,7 +112,7 @@ function findFiberMac(img: Element): string | undefined {
       if (mac) return mac;
     }
   } catch {
-    // Malformed/unexpected fiber shape — never worth aborting resolution over.
+    // Malformed/unexpected fiber shape: never worth aborting resolution over.
   }
   return undefined;
 }
@@ -149,7 +149,7 @@ function collectCandidateImgs(root: ParentNode): Set<HTMLImageElement> {
 // __reactProps$ ancestor walk first, falling back to the fiber-tree walk
 // for pages where the DOM props carry nothing useful. Returns the number of
 // imgs stamped this call (a fresh mac written, whether or not it matches
-// what was there before — simplicity over precision, since a stamp write is
+// what was there before: simplicity over precision, since a stamp write is
 // rare and cheap for callers to react to).
 export function resolveIconMacs(root: ParentNode): number {
   const candidates = collectCandidateImgs(root);
@@ -199,7 +199,7 @@ function collectPairFrom(candidate: unknown, pairs: Map<string, string>): void {
 }
 
 // Examines one fiber's memoizedProps for recoverable [mac, name] pairs:
-// every own-enumerable array value (capped at 500 items — anything bigger
+// every own-enumerable array value (capped at 500 items, since anything bigger
 // is almost certainly not a small client list) is scanned item by item,
 // and the props object itself plus each of its direct object-typed values
 // are checked the same way, covering single-record components too.
@@ -218,7 +218,7 @@ function harvestFromProps(props: unknown, pairs: Map<string, string>): void {
 }
 
 // Harvests [mac, name] pairs from the fiber tree above every icon-shaped
-// <img> on the page — the counterpart to resolveIconMacs's stamping, for
+// <img> on the page: the counterpart to resolveIconMacs's stamping, for
 // pages (e.g. flows) whose row components never carry per-row props at all,
 // only a single array prop on a list component many fiber levels up. Those
 // pairs feed content/state.ts's name-based sweep fallback: even where we
@@ -226,8 +226,8 @@ function harvestFromProps(props: unknown, pairs: Map<string, string>): void {
 // recognize the client's *name* elsewhere near the icon and key off that.
 //
 // The visited set is local to this single call (not module-level) so
-// candidates sharing an ancestor fiber — which is the common case, since
-// they're siblings in the same list — don't re-harvest it repeatedly, while
+// candidates sharing an ancestor fiber, which is the common case, since
+// they're siblings in the same list, don't re-harvest it repeatedly, while
 // never leaking state between calls.
 export function harvestNameMacPairs(root: ParentNode): Array<[string, string]> {
   const candidates = collectCandidateImgs(root);
@@ -245,7 +245,7 @@ export function harvestNameMacPairs(root: ParentNode): Array<[string, string]> {
         try {
           harvestFromProps(fiber.memoizedProps, pairs);
         } catch {
-          // Malformed props at this fiber level — skip it, keep climbing.
+          // Malformed props at this fiber level: skip it, keep climbing.
         }
       }
     } catch {

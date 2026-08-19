@@ -10,14 +10,14 @@ export default defineContentScript({
     let map = map0;
 
     // Selects the same icon-shaped <img>s sweepAllIcons treats as candidates
-    // (content/state.ts) — used only to fingerprint the current candidate
+    // (content/state.ts): used only to fingerprint the current candidate
     // set, not to paint anything here.
     const CANDIDATE_SELECTOR = 'img[src*="fingerprint/"], img[src*="/clients/photos/"], img[data-ubicon]';
 
     // Cheap signal for "did the set of icons worth resolving actually
     // change since the last repaint": the count plus each candidate's src,
     // concatenated. Good enough to detect additions/removals/src swaps
-    // without hashing — collisions would only cost a skipped resolve, never
+    // without hashing: collisions would only cost a skipped resolve, never
     // a wrong paint, since paintAll above already ran against fresh DOM.
     function candidateFingerprint(): string {
       const imgs = document.querySelectorAll<HTMLImageElement>(CANDIDATE_SELECTOR);
@@ -39,7 +39,7 @@ export default defineContentScript({
         // Ask the MAIN-world bridge (entrypoints/bridge.content.ts) to
         // (re)resolve any icons it can key off React's internal props. It
         // replies with 'ubicon:resolved'. Only worth firing when the
-        // candidate situation actually changed since the last repaint —
+        // candidate situation actually changed since the last repaint:
         // the bridge's own resolver is stamp/WeakSet-guarded and cheap, but
         // there's no point re-running it every debounced repaint when
         // nothing painting cares about has moved.
@@ -61,7 +61,7 @@ export default defineContentScript({
     });
 
     // Only repaint when the bridge actually stamped something new, or its
-    // harvested name/mac pairs taught us something we didn't know — a
+    // harvested name/mac pairs taught us something we didn't know: a
     // no-op resolve (n === 0, no new pairs) means nothing changed that
     // painting cares about, so re-triggering here would just loop the
     // dispatch above. mergeNames re-merging identical pairs on a later
