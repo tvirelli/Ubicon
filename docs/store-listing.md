@@ -5,7 +5,7 @@
 - Privacy policy URL: https://github.com/tvirelli/Ubicon/blob/main/PRIVACY.md
 - Homepage / support: https://github.com/tvirelli/Ubicon
 - Version: 0.1.0
-- Screenshots (docs/store/images/): 01-clients-table.png, 02-popup-overlay.png (both 1280x800)
+- Screenshots (docs/store/images/), all 1280x800: 01-clients-table.png (icon overlay across the client list), 02-popup-overlay.png (extension popup with assignments), 03-assign-community.png (Community database picker), 04-assign-custom.png (Custom icon upload)
 - Small promo tile: promo-tile-440x280.png (440x280)
 
 ## Name
