@@ -29,6 +29,8 @@ const CSS = `
   .item:hover { background:var(--hover); }
   .item img { width:28px; height:28px; object-fit:contain; }
   .item .n { font-size:13px; } .item .m { font-size:11px; color:var(--muted); }
+  .grouphdr { font-size:10.5px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin:16px 6px 4px; }
+  .grouphdr:first-child { margin-top:6px; }
   .remove { color:#c0392b; padding:8px 6px; cursor:pointer; font-size:13px; }
   .msg { color:var(--muted); font-size:12px; padding:10px 4px; }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#5B3FD1; color:#fff;
@@ -194,21 +196,38 @@ export function openAssignPanel(mac: string): void {
       removeRow.hidden = false;
       removeRow.addEventListener('click', async () => finish(await send({ type: 'unassign', mac }), 'removed'));
     }
+    const catLabel = (c: string) => {
+      const fixed: Record<string, string> = { '3d_printer': '3D Printer', iot_hub: 'IoT Hub', tv: 'TV' };
+      return fixed[c] ?? c.replace(/_/g, ' ').replace(/\b\w/g, m => m.toUpperCase());
+    };
+    const addItem = (d: DeviceRecord) => {
+      const item = document.createElement('div');
+      item.className = 'item';
+      item.innerHTML = `<img loading="lazy" alt=""><div><div class="n"></div><div class="m"></div></div>`;
+      (item.querySelector('img') as HTMLImageElement).src =
+        `https://cdn.jsdelivr.net/gh/tvirelli/Ubicon-DB@main/${d.icon}`;
+      item.querySelector('.n')!.textContent = d.name;
+      item.querySelector('.m')!.textContent =
+        d.type === 'generic' ? `Generic ${catLabel(d.category)}` : [d.vendor, d.model].filter(Boolean).join(' · ');
+      item.addEventListener('click', async () => finish(await send({ type: 'assign-db', mac, deviceId: d.id }), 'assigned'));
+      list.append(item);
+    };
     const render = async (query: string) => {
       const reply = await send({ type: 'search', query });
       if (!reply.ok) { list.innerHTML = `<div class="msg">Database unavailable, check your connection and try Refresh in the Ubicon popup.</div>`; return; }
       const results = (reply as { results?: DeviceRecord[] }).results ?? [];
+      const real = results.filter(d => d.type !== 'generic');
+      const generic = results.filter(d => d.type === 'generic');
       list.innerHTML = results.length ? '' : '<div class="msg">No matches. Add it to the community database, see the Ubicon popup for a link.</div>';
-      for (const d of results) {
-        const item = document.createElement('div');
-        item.className = 'item';
-        item.innerHTML = `<img loading="lazy" alt=""><div><div class="n"></div><div class="m"></div></div>`;
-        (item.querySelector('img') as HTMLImageElement).src =
-          `https://cdn.jsdelivr.net/gh/tvirelli/Ubicon-DB@main/${d.icon}`;
-        item.querySelector('.n')!.textContent = d.name;
-        item.querySelector('.m')!.textContent = `${d.vendor} · ${d.model}`;
-        item.addEventListener('click', async () => finish(await send({ type: 'assign-db', mac, deviceId: d.id }), 'assigned'));
-        list.append(item);
+      // Branded devices are the primary results; generic device types follow
+      // under their own heading as a fallback when there is no exact match.
+      if (real.length) {
+        if (generic.length) list.insertAdjacentHTML('beforeend', '<div class="grouphdr">Devices</div>');
+        real.forEach(addItem);
+      }
+      if (generic.length) {
+        list.insertAdjacentHTML('beforeend', '<div class="grouphdr">Generic device types</div>');
+        generic.forEach(addItem);
       }
     };
     let deb: number | undefined;
