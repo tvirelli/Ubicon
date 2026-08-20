@@ -1,5 +1,13 @@
 # Store listing draft
 
+## Submission metadata
+
+- Privacy policy URL: https://github.com/tvirelli/Ubicon/blob/main/PRIVACY.md
+- Homepage / support: https://github.com/tvirelli/Ubicon
+- Version: 0.1.0
+- Screenshots (docs/store/images/): 01-clients-table.png (1280x800)
+- Small promo tile: promo-tile-440x280.png (440x280)
+
 ## Name
 
 Ubicon - Device Icons for UniFi
