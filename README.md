@@ -21,6 +21,13 @@ community database or your own images.
 Device database: [Ubicon-DB](https://github.com/tvirelli/Ubicon-DB); PRs
 welcome, with optional credit for contributors who add a device.
 
+## Install
+
+- Chrome / Brave: [Chrome Web Store](https://chromewebstore.google.com/detail/ubicon-device-icons-for-u/gceohejefeclhbbbkbifhpeonkfdgnkm)
+- Edge: [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/jddpmahejanjljlgobeellacbgppbdff)
+- Firefox: [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/ubicon-device-icons-for-unifi/)
+- Manual: zips for each browser are attached to every [GitHub release](https://github.com/tvirelli/Ubicon/releases).
+
 ## License
 
 MIT, see [LICENSE](LICENSE). The device database is separately MIT-licensed
