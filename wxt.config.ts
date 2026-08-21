@@ -8,7 +8,7 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'Ubicon - Device Icons for UniFi',
     description:
-      'Assign community and custom icons to network clients that UniFi does not recognize. Visual overlay only, never touches your UniFi settings.',
+      'Community and custom icons for clients that UniFi does not recognize. Visual overlay only, never touches your UniFi settings.',
     permissions: ['storage', 'unlimitedStorage', 'alarms', 'scripting', 'contextMenus', 'activeTab'],
     host_permissions: [
       'https://unifi.ui.com/*',
