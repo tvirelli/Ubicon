@@ -38,8 +38,24 @@ test('addConsoleOrigin returns already for unifi.ui.com', async () => {
 });
 
 test('addConsoleOrigin returns already for an origin already stored', async () => {
+  stubPermissions(true);
   await fakeBrowser.storage.local.set({ origins: ['https://10.71.0.1'] });
   expect(await addConsoleOrigin('https://10.71.0.1/network/default')).toBe('already');
+});
+
+test('addConsoleOrigin calls permissions.request before any other await (Firefox user-input rule)', async () => {
+  // Firefox drops a handler's user-input status as soon as it awaits a
+  // promise, so permissions.request must be the first async call, or it
+  // rejects with "may only be called from a user input handler". Chrome
+  // is lenient here, which is why this only ever broke in Firefox.
+  const request = stubPermissions(true);
+  stubScripting([]);
+  const get = vi.spyOn(fakeBrowser.storage.local, 'get');
+
+  addConsoleOrigin('https://10.71.0.3/network/default');
+
+  expect(request).toHaveBeenCalledWith({ origins: ['https://10.71.0.3/*'] });
+  expect(get).not.toHaveBeenCalled();
 });
 
 test('addConsoleOrigin returns denied and registers nothing when permission is refused', async () => {

@@ -26,16 +26,19 @@ export async function addConsoleOrigin(url: string | undefined): Promise<AddCons
   // unifi.ui.com is manifest-declared already; nothing to add for it.
   if (origin === 'https://unifi.ui.com') return 'already';
 
-  const origins = await listConsoleOrigins();
-  if (origins.includes(origin)) return 'already';
-
-  // Valid only when called synchronously from a user gesture (a menu click,
-  // a popup button click). One quick storage.local read (the already-stored
-  // check just above) precedes this; that ordering is spec-required, not
-  // incidental, but callers must not add any further awaits before this
-  // point, or browsers may no longer consider the request gesture-triggered.
+  // Must be the FIRST await on the path from the user gesture (menu click,
+  // popup button click) to here. Firefox drops a handler's user-input status
+  // the moment it awaits any promise, and permissions.request then rejects
+  // with "may only be called from a user input handler"; Chrome keeps the
+  // gesture alive for a few seconds, which is why an earlier storage read
+  // here went unnoticed there. Callers must likewise not await anything
+  // before calling addConsoleOrigin. An origin already granted resolves true
+  // silently, so the already-stored check below costs the user no extra prompt.
   const granted = await browser.permissions.request({ origins: [origin + '/*'] });
   if (!granted) return 'denied';
+
+  const origins = await listConsoleOrigins();
+  if (origins.includes(origin)) return 'already';
 
   // Reuses the same shared registration shape ensureRegisteredOrigins uses,
   // so all callers stay in lockstep.

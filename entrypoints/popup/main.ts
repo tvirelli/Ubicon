@@ -140,7 +140,15 @@ async function setupAddConsoleButton() {
   btn.addEventListener('click', async () => {
     // Called directly here (this click IS the user gesture); see
     // shared/consoles.ts's addConsoleOrigin for why that matters.
-    const result = await addConsoleOrigin(tab.url);
+    let result: Awaited<ReturnType<typeof addConsoleOrigin>>;
+    try {
+      result = await addConsoleOrigin(tab.url);
+    } catch (err) {
+      // A rejected permissions.request (e.g. Firefox's user-input rule)
+      // used to vanish here, leaving the button apparently dead.
+      $('db-status').textContent = err instanceof Error ? err.message : 'could not add console';
+      return;
+    }
     if (result === 'added') {
       btn.hidden = true;
       renderConsoles();
