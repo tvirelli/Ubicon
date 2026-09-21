@@ -2,9 +2,25 @@ import { browser } from 'wxt/browser';
 import { exportAll, getAllAssignments, getCachedIcon, getIndexCache, iconKey } from '../../shared/storage';
 import { addConsoleOrigin, listConsoleOrigins, removeConsoleOrigin } from '../../shared/consoles';
 import type { UbiconMsg, UbiconReply } from '../../shared/messages';
+import { VIEW_ONLY_TEXT } from '../../shared/sync/ui-text';
+import { initPopupSync } from './sync';
 
 const send = (msg: UbiconMsg) => browser.runtime.sendMessage(msg) as Promise<UbiconReply>;
 const $ = (id: string) => document.getElementById(id)!;
+
+// Set once sync-status answers. A view-only connection cannot save changes
+// (GitHub refuses its writes), so the controls that make changes are locked
+// here and the notice at the top of the popup says why.
+let readOnly = false;
+
+const EMPTY_TEXT = "No devices assigned yet. Open a client's Change Icon dialog (click its photo) and press the Ubicon mark next to the dialog title.";
+
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
 
 // Filename-safe slug for the icon download: lowercase, runs of
 // non-alphanumeric characters collapsed to a single '-', trimmed.
@@ -17,28 +33,39 @@ async function renderStatus() {
     : 'database not loaded yet';
 }
 
+// Rendering awaits storage for every row, so two calls can overlap (the one
+// at startup and the one that follows the sync status, for instance). Rows
+// are collected first and put on the page in one go, and only the newest
+// call gets to do that; otherwise both would append and every row would
+// show twice.
+let renderRun = 0;
+
 async function renderList() {
+  const run = ++renderRun;
   const list = $('list');
   const assignments = await getAllAssignments();
   const macs = Object.keys(assignments).sort();
   if (!macs.length) {
-    list.innerHTML = '<p class="empty">No devices assigned yet. Open a client\'s Change Icon dialog (click its photo) and press the Ubicon mark next to the dialog title.</p>';
+    if (run === renderRun) list.replaceChildren(el('p', 'empty', EMPTY_TEXT));
     return;
   }
-  list.innerHTML = '';
+  const rows: HTMLElement[] = [];
   for (const mac of macs) {
     const ref = assignments[mac];
     if (!ref) continue; // keys come straight from Object.keys(assignments) above, narrows for TS only
     const dataUri = await getCachedIcon(iconKey(ref));
-    const row = document.createElement('div');
-    row.className = 'row';
-    row.innerHTML = `<img alt=""><div><div class="name"></div><div class="mac"></div></div>
-      <span class="badge"></span><button title="Remove">✕</button>`;
-    (row.querySelector('img') as HTMLImageElement).src = dataUri ?? '/icon/32.png';
-    row.querySelector('.name')!.textContent = ref.kind === 'db' ? ref.deviceId : ref.label;
-    row.querySelector('.mac')!.textContent = mac;
-    row.querySelector('.badge')!.textContent = ref.kind === 'db' ? 'community' : dataUri ? 'custom' : 'custom · icon missing here';
-    const removeBtn = row.querySelector('button')!;
+    if (run !== renderRun) return;
+    const row = el('div', 'row');
+    const img = el('img');
+    img.alt = '';
+    img.src = dataUri ?? '/icon/32.png';
+    const text = el('div');
+    text.append(el('div', 'name', ref.kind === 'db' ? ref.deviceId : ref.label), el('div', 'mac', mac));
+    const badge = el('span', 'badge', ref.kind === 'db' ? 'community' : dataUri ? 'custom' : 'custom · icon missing here');
+    const removeBtn = el('button', undefined, '✕');
+    removeBtn.title = readOnly ? VIEW_ONLY_TEXT : 'Remove';
+    removeBtn.disabled = readOnly;
+    row.append(img, text, badge, removeBtn);
     let confirmTimer: ReturnType<typeof setTimeout> | undefined;
     removeBtn.addEventListener('click', async () => {
       if (!removeBtn.classList.contains('confirm')) {
@@ -93,13 +120,14 @@ async function renderList() {
         row.append(download);
       }
     }
-    list.append(row);
+    rows.push(row);
   }
+  list.replaceChildren(...rows);
 }
 
 async function renderConsoles() {
   const ul = $('consoles');
-  ul.innerHTML = '';
+  ul.replaceChildren();
   for (const origin of await listConsoleOrigins()) {
     const li = document.createElement('li');
     li.className = 'console-row';
@@ -204,3 +232,12 @@ renderStatus();
 renderList();
 renderConsoles();
 setupAddConsoleButton();
+initPopupSync(status => {
+  const locked = status.connected && status.readOnly;
+  const importBtn = $('import') as HTMLButtonElement;
+  importBtn.disabled = locked;
+  importBtn.title = locked ? VIEW_ONLY_TEXT : '';
+  if (locked === readOnly) return;
+  readOnly = locked;
+  renderList();
+});

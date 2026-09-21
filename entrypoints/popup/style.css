@@ -37,3 +37,28 @@ footer { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; border-to
 footer button { font-size: 11.5px; border: 1px solid var(--line); background: none; color: var(--fg); border-radius: 6px; padding: 5px 9px; cursor: pointer; }
 footer button:hover { border-color: var(--accent); color: var(--accent); }
 footer a { font-size: 11px; color: var(--accent); margin-left: auto; text-decoration: none; }
+
+/* GitHub sync. --accent-ink is the brand purple where it is dark enough to
+   read as text, and a lighter purple on the dark theme where it is not. */
+:root { --accent-ink: #5B3FD1; --accent-wash: #EFEBFF; --warn: #8A5A00; }
+@media (prefers-color-scheme: dark) {
+  :root { --accent-ink: #B5A6FF; --accent-wash: #2A2447; --warn: #F0C15C; }
+}
+:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+.hint { margin: 8px; padding: 10px 12px; border: 1px solid var(--accent-ink); border-radius: 8px; background: var(--accent-wash); }
+.hint p { margin: 0 0 8px; font-size: 12px; line-height: 1.45; }
+.hint-actions { display: flex; gap: 6px; }
+.hint button { font-size: 11.5px; border: 1px solid var(--accent-ink); background: none; color: var(--accent-ink); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.hint button.solid { background: var(--accent); border-color: var(--accent); color: #fff; }
+.view-only { margin: 8px 8px 0; padding: 7px 10px; font-size: 11.5px; border-left: 3px solid var(--warn); color: var(--fg); background: rgba(138, 90, 0, .1); border-radius: 4px; }
+#sync-section { padding: 8px 14px 10px; border-top: 1px solid var(--line); }
+#sync-section h2 { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 6px; }
+.sync-row { display: flex; align-items: center; gap: 8px; min-height: 24px; }
+#sync-text { font-size: 11.5px; color: var(--muted); flex: 1; }
+#sync-text[data-tone="warn"], #sync-text[data-tone="error"] { color: var(--warn); font-weight: 600; }
+#sync-text:empty { display: none; }
+#sync-setup, .sync-expiry { font-size: 11.5px; color: var(--accent-ink); }
+.sync-expiry { display: block; margin-top: 4px; color: var(--warn); }
+#sync-now { font-size: 11.5px; border: 1px solid var(--line); background: none; color: var(--fg); border-radius: 6px; padding: 4px 9px; cursor: pointer; }
+#sync-now:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
+button:disabled { opacity: .45; cursor: default; }
