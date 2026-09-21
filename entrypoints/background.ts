@@ -7,6 +7,13 @@ import {
 } from '../shared/storage';
 import { registrationsForOrigin } from '../shared/registrations';
 import { addConsoleOrigin } from '../shared/consoles';
+import { serialized } from '../shared/write-queue';
+import {
+  SetupError, connect, disconnect, getCredentials, getStatus, markDirty, replaceToken, syncOnce,
+} from '../shared/sync/engine';
+import { dismissHint, readHint, shouldShowHint } from '../shared/sync/hint';
+import { encodeSetupCode } from '../shared/sync/setup-code';
+import { getSyncMode } from '../shared/storage';
 
 async function blobToDataUri(blob: Blob): Promise<string> {
   const buf = new Uint8Array(await blob.arrayBuffer());
@@ -24,20 +31,6 @@ async function downloadDbIcon(deviceId: string): Promise<string> {
   const dataUri = await blobToDataUri(await res.blob());
   await cacheIcon(`db:${deviceId}`, dataUri);
   return dataUri;
-}
-
-// Every change to assignments runs through this queue, one at a time. Outside
-// browser mode all assignments live under a single storage.local key, so each
-// change is a read-modify-write of the whole set: two running at once (say,
-// several quick clicks in the popup, or the popup and a sync pull) would each
-// read the old set and the last writer would silently drop the other's change.
-// This is also why the popup sends 'unassign' and 'import' here instead of
-// calling shared/storage.ts itself: one queue only works if there is one writer.
-let writeQueue: Promise<unknown> = Promise.resolve();
-export function serialized<T>(fn: () => Promise<T>): Promise<T> {
-  const run = writeQueue.then(fn, fn);
-  writeQueue = run.catch(() => {}); // a failed change must not wedge the queue
-  return run;
 }
 
 export async function handleMessage(msg: UbiconMsg): Promise<UbiconReply> {
@@ -71,10 +64,62 @@ export async function handleMessage(msg: UbiconMsg): Promise<UbiconReply> {
         const index = await fetchIndex(true);
         return { ok: true, count: index.count };
       }
+      case 'sync-connect': {
+        const connected = await connect({ token: msg.token, repo: msg.repo, readOnly: msg.readOnly });
+        await scheduleSync(true);
+        return { ok: true, connected };
+      }
+      case 'sync-replace-token':
+        await replaceToken(msg.token);
+        return { ok: true, status: await getStatus() };
+      case 'sync-disconnect': {
+        const mode = await disconnect({ removeHint: msg.removeHint });
+        await scheduleSync(false);
+        return { ok: true, mode };
+      }
+      case 'sync-now':
+        await markDirty(); // a full read, not a conditional one: "now" should mean now
+        await syncOnce();
+        return { ok: true, status: await getStatus() };
+      case 'sync-status':
+        return { ok: true, status: await getStatus(), hint: (await shouldShowHint()) ? await readHint() : null };
+      case 'sync-setup-code': {
+        const c = await getCredentials();
+        if (!c) return { ok: false, error: 'Not connected' };
+        return { ok: true, setupCode: encodeSetupCode(c) };
+      }
+      case 'sync-dismiss-hint':
+        await dismissHint();
+        return { ok: true };
     }
   } catch (e) {
+    if (e instanceof SetupError) return { ok: false, error: e.reason, reason: e.reason, others: e.others };
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
+}
+
+const SYNC_ALARM = 'ubicon-sync';
+const SYNC_EVERY_MINUTES = 5;
+const PUSH_DEBOUNCE_MS = 10_000;
+
+// The alarm exists only while this browser is connected, so an unconnected
+// browser makes no GitHub traffic at all.
+export async function scheduleSync(on: boolean): Promise<void> {
+  if (on) browser.alarms.create(SYNC_ALARM, { periodInMinutes: SYNC_EVERY_MINUTES });
+  else await browser.alarms.clear(SYNC_ALARM);
+}
+
+let pushTimer: ReturnType<typeof setTimeout> | undefined;
+// A local change is marked first and pushed a few seconds later, so a burst
+// of assignments becomes one commit. The mark is what counts: an MV3 worker
+// can be shut down before the timer fires, and the alarm then finishes the
+// job. The engine's own writes land here too; they merge to nothing new and
+// produce no commit.
+export async function onAssignmentsChanged(): Promise<void> {
+  if ((await getSyncMode()) !== 'github') return;
+  await markDirty();
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => { syncOnce().catch(() => {}); }, PUSH_DEBOUNCE_MS);
 }
 
 export async function hydrateMissingIcons(): Promise<number> {
@@ -144,13 +189,17 @@ export default defineBackground(() => {
     return true; // async response
   });
   browser.alarms.create('ubicon-refresh', { periodInMinutes: 720 });
-  browser.alarms.onAlarm.addListener(a => { if (a.name === 'ubicon-refresh') fetchIndex(true).catch(() => {}); });
+  browser.alarms.onAlarm.addListener(a => {
+    if (a.name === 'ubicon-refresh') fetchIndex(true).catch(() => {});
+    if (a.name === SYNC_ALARM) syncOnce().catch(() => {});
+  });
   browser.storage.onChanged.addListener((changes, area) => {
     // Assignments live in storage.sync in browser mode and under the single
     // 'assignments' key of storage.local otherwise (see shared/storage.ts).
     // Anything else in storage.local (icon blobs, the index, names) must not
     // trigger a hydrate, or caching an icon would loop back into this.
     if (area === 'sync' || (area === 'local' && 'assignments' in changes)) hydrateMissingIcons().catch(() => {});
+    if (area === 'local' && ('assignments' in changes || 'tombstones' in changes)) onAssignmentsChanged().catch(() => {});
   });
   browser.runtime.onInstalled.addListener(() => {
     ensureRegisteredOrigins().catch(() => {});
@@ -178,4 +227,11 @@ export default defineBackground(() => {
   });
   hydrateMissingIcons().catch(() => {});
   ensureRegisteredOrigins().catch(() => {});
+  // Pull on startup; re-create the alarm, which Chrome drops on an extension
+  // update just as it drops dynamic content scripts.
+  getSyncMode().then(mode => {
+    if (mode !== 'github') return;
+    scheduleSync(true).catch(() => {});
+    syncOnce().catch(() => {});
+  }).catch(() => {});
 });

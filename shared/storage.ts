@@ -78,11 +78,20 @@ export async function getAllAssignments(): Promise<Record<string, AssignmentRef>
   return Object.fromEntries(Object.entries(assignments).map(([mac, s]) => [mac, s.ref]));
 }
 
-export async function setAssignment(mac: string, ref: AssignmentRef, t: number = Date.now()): Promise<void> {
+// Change times decide merges, so outside browser mode they are corrected by
+// the offset the sync engine measured against GitHub's clock (0 unless this
+// machine's clock is more than a minute out).
+async function stampNow(): Promise<number> {
+  const offset = (await browser.storage.local.get('sync:clockOffset'))['sync:clockOffset'];
+  return Date.now() + (typeof offset === 'number' ? offset : 0);
+}
+
+export async function setAssignment(mac: string, ref: AssignmentRef, t?: number): Promise<void> {
   if ((await getSyncMode()) === 'browser') {
-    await browser.storage.sync.set({ [A(mac)]: encode(ref, t) });
+    await browser.storage.sync.set({ [A(mac)]: encode(ref, t ?? Date.now()) });
     return;
   }
+  t ??= await stampNow();
   const m = await readLocalArea();
   m.assignments[mac] = { ref, t };
   delete m.tombstones[mac];
@@ -103,7 +112,7 @@ export async function removeAssignment(mac: string): Promise<void> {
     // against the older assignment other browsers and the repo still hold.
     const m = await readLocalArea();
     delete m.assignments[mac];
-    m.tombstones[mac] = Date.now();
+    m.tombstones[mac] = await stampNow();
     await writeManifest(m);
   }
   if (ref?.kind === 'custom') {
