@@ -65,3 +65,21 @@ test('a local change is marked for pushing only on a connected browser', async (
   await onAssignmentsChanged();
   expect((await fakeBrowser.storage.local.get('sync:dirty'))['sync:dirty']).toBeTypeOf('number');
 });
+
+test('a view-only connection refuses every change, so this browser never shows edits nobody else will see', async () => {
+  await migrateToLocal('github');
+  await fakeBrowser.storage.local.set({ 'sync:token': TOKEN, 'sync:repo': 'tony/ubicon-sync', 'sync:state': { readOnly: true } });
+  const refused = { ok: false, error: 'This browser is connected with a view-only token.', reason: 'view-only' };
+  expect(await handleMessage({ type: 'assign-custom', mac: 'd4:3d:39:80:fc:80', dataUri: 'data:image/png;base64,Q', label: 'x' })).toEqual(refused);
+  expect(await handleMessage({ type: 'assign-db', mac: 'd4:3d:39:80:fc:80', deviceId: 'a' })).toEqual(refused);
+  expect(await handleMessage({ type: 'unassign', mac: 'd4:3d:39:80:fc:80' })).toEqual(refused);
+  expect(await handleMessage({ type: 'import', file: {} })).toEqual(refused);
+  expect(JSON.stringify(await fakeBrowser.storage.local.get(null))).not.toContain('icon:custom');
+  // Reading and searching still work.
+  expect((await handleMessage({ type: 'sync-status' })).ok).toBe(true);
+});
+
+test('a view-only flag left over from an old connection does not block a browser that has disconnected', async () => {
+  await fakeBrowser.storage.local.set({ 'sync:state': { readOnly: true } });
+  expect(await handleMessage({ type: 'unassign', mac: 'd4:3d:39:80:fc:80' })).toEqual({ ok: true });
+});

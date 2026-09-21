@@ -398,6 +398,13 @@ export async function getStatus(): Promise<SyncStatus> {
   };
 }
 
+// Connected with a token GitHub refuses writes from. Changes are blocked in
+// such a browser: they could never reach the repo, so they would only make
+// this browser disagree with every other one.
+export async function isViewOnly(): Promise<boolean> {
+  return (await getSyncMode()) === 'github' && (await getState()).readOnly === true;
+}
+
 // For Show setup code. The only place the stored token is handed back out.
 export async function getCredentials(): Promise<{ token: string; repo: string; readOnly: boolean } | null> {
   const [token, repo, state] = await Promise.all([get<string>(TOKEN_KEY), get<string>(REPO_KEY), getState()]);

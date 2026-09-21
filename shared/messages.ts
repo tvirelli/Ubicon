@@ -39,4 +39,4 @@ export type UbiconReply =
   }
   // `reason` and `others` are set for sync setup failures, so the wizard can
   // show the matching fix card; `error` stays the human-readable fallback.
-  | { ok: false; error: string; reason?: SetupFailure; others?: number };
+  | { ok: false; error: string; reason?: SetupFailure | 'view-only'; others?: number };

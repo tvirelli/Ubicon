@@ -9,7 +9,7 @@ import { registrationsForOrigin } from '../shared/registrations';
 import { addConsoleOrigin } from '../shared/consoles';
 import { serialized } from '../shared/write-queue';
 import {
-  SetupError, connect, disconnect, getCredentials, getStatus, markDirty, replaceToken, syncOnce,
+  SetupError, connect, disconnect, getCredentials, getStatus, isViewOnly, markDirty, replaceToken, syncOnce,
 } from '../shared/sync/engine';
 import { dismissHint, readHint, shouldShowHint } from '../shared/sync/hint';
 import { encodeSetupCode } from '../shared/sync/setup-code';
@@ -33,8 +33,16 @@ async function downloadDbIcon(deviceId: string): Promise<string> {
   return dataUri;
 }
 
+const CHANGES_ASSIGNMENTS = new Set<UbiconMsg['type']>(['assign-db', 'assign-custom', 'unassign', 'import']);
+
 export async function handleMessage(msg: UbiconMsg): Promise<UbiconReply> {
   try {
+    // One check here covers every page that can send a change (the UniFi
+    // page's picker, the popup, Options); the pages also disable their
+    // controls, but this is the one that cannot be bypassed.
+    if (CHANGES_ASSIGNMENTS.has(msg.type) && (await isViewOnly())) {
+      return { ok: false, error: 'This browser is connected with a view-only token.', reason: 'view-only' };
+    }
     switch (msg.type) {
       case 'assign-db': {
         // The download stays outside the queue: it can take seconds, and it
