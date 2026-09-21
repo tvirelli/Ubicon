@@ -19,8 +19,33 @@ export default defineConfig({
     optional_host_permissions: ['*://*/*'],
     icons: { 16: '/icon/16.png', 32: '/icon/32.png', 48: '/icon/48.png', 96: '/icon/96.png', 128: '/icon/128.png' },
     browser_specific_settings:
-      // 128.0: minimum Firefox version supporting content-script world: 'MAIN'
-      // (used by the React props bridge, entrypoints/bridge.content.ts).
-      browser === 'firefox' ? { gecko: { id: 'ubicon@tvirelli.github.io', strict_min_version: '128.0' } } : undefined,
+      // 140.0 desktop / 142.0 Android: the first Firefox versions that
+      // understand gecko.data_collection_permissions. AMO warns when
+      // strict_min_version predates a manifest key, so the minimum follows
+      // that key. It also covers the older floor of 128.0, the first version
+      // with content-script world: 'MAIN' (used by the React props bridge,
+      // entrypoints/bridge.content.ts).
+      //
+      // data_collection_permissions is declared here on purpose: WXT does
+      // not emit it, it only warns when it is missing. required: ['none']
+      // states that using Ubicon never depends on collecting any data.
+      // The optional categories cover GitHub sync only, and are asked for at
+      // the moment the user turns it on (shared/sync/permission.ts, which
+      // must list the same names): the MAC addresses and labels in the synced
+      // file, and the access token sent to GitHub with each request. Mozilla
+      // counts a repository the user owns as data leaving the browser.
+      browser === 'firefox'
+        ? {
+            gecko: {
+              id: 'ubicon@tvirelli.github.io',
+              strict_min_version: '140.0',
+              data_collection_permissions: {
+                required: ['none'],
+                optional: ['personallyIdentifyingInfo', 'authenticationInfo'],
+              },
+            },
+            gecko_android: { strict_min_version: '142.0' },
+          }
+        : undefined,
   }),
 });
