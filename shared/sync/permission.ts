@@ -3,11 +3,11 @@ import { browser } from 'wxt/browser';
 export const GITHUB_API_ORIGIN = 'https://api.github.com/*';
 
 // Firefox (140+) wants every kind of data an extension sends off the machine
-// declared, and counts a repository the user owns as "off the machine". These
-// are the optional categories from wxt.config.ts, asked for only when the
-// user turns sync on: the MAC addresses and labels in the synced file, and
-// the token that goes to GitHub with each request.
-export const FIREFOX_DATA_COLLECTION = ['personallyIdentifyingInfo', 'authenticationInfo'] as const;
+// declared, and counts a repository the user owns as "off the machine". This
+// is the optional category from wxt.config.ts (keep the two in step), asked
+// for only when the user turns sync on: the MAC addresses and labels in the
+// synced file.
+export const FIREFOX_DATA_COLLECTION = ['personallyIdentifyingInfo'] as const;
 
 // Asks for everything GitHub sync needs, in one browser prompt.
 //

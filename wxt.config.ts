@@ -29,11 +29,11 @@ export default defineConfig({
       // data_collection_permissions is declared here on purpose: WXT does
       // not emit it, it only warns when it is missing. required: ['none']
       // states that using Ubicon never depends on collecting any data.
-      // The optional categories cover GitHub sync only, and are asked for at
+      // The optional category covers GitHub sync only, and is asked for at
       // the moment the user turns it on (shared/sync/permission.ts, which
-      // must list the same names): the MAC addresses and labels in the synced
-      // file, and the access token sent to GitHub with each request. Mozilla
-      // counts a repository the user owns as data leaving the browser.
+      // must list the same name): the MAC addresses and labels in the synced
+      // file. Mozilla counts a repository the user owns as data leaving the
+      // browser.
       browser === 'firefox'
         ? {
             gecko: {
@@ -41,7 +41,7 @@ export default defineConfig({
               strict_min_version: '140.0',
               data_collection_permissions: {
                 required: ['none'],
-                optional: ['personallyIdentifyingInfo', 'authenticationInfo'],
+                optional: ['personallyIdentifyingInfo'],
               },
             },
             gecko_android: { strict_min_version: '142.0' },
