@@ -2,7 +2,7 @@ import { browser } from 'wxt/browser';
 import type { UbiconMsg, UbiconReply } from '../shared/messages';
 import { fetchIndex, iconUrlFor, searchDevices } from '../shared/db';
 import {
-  cacheIcon, getAllAssignments, getCachedIcon, iconKey,
+  cacheIcon, getAllAssignments, getCachedIcon, iconKey, importAll,
   removeAssignment, setAssignment,
 } from '../shared/storage';
 import { registrationsForOrigin } from '../shared/registrations';
@@ -26,23 +26,43 @@ async function downloadDbIcon(deviceId: string): Promise<string> {
   return dataUri;
 }
 
+// Every change to assignments runs through this queue, one at a time. Outside
+// browser mode all assignments live under a single storage.local key, so each
+// change is a read-modify-write of the whole set: two running at once (say,
+// several quick clicks in the popup, or the popup and a sync pull) would each
+// read the old set and the last writer would silently drop the other's change.
+// This is also why the popup sends 'unassign' and 'import' here instead of
+// calling shared/storage.ts itself: one queue only works if there is one writer.
+let writeQueue: Promise<unknown> = Promise.resolve();
+export function serialized<T>(fn: () => Promise<T>): Promise<T> {
+  const run = writeQueue.then(fn, fn);
+  writeQueue = run.catch(() => {}); // a failed change must not wedge the queue
+  return run;
+}
+
 export async function handleMessage(msg: UbiconMsg): Promise<UbiconReply> {
   try {
     switch (msg.type) {
       case 'assign-db': {
+        // The download stays outside the queue: it can take seconds, and it
+        // touches only the icon cache, never the assignment set.
         const dataUri = (await getCachedIcon(`db:${msg.deviceId}`)) ?? (await downloadDbIcon(msg.deviceId));
-        await setAssignment(msg.mac, { kind: 'db', deviceId: msg.deviceId });
+        await serialized(() => setAssignment(msg.mac, { kind: 'db', deviceId: msg.deviceId }));
         return { ok: true, dataUri };
       }
       case 'assign-custom': {
         const customId = crypto.randomUUID();
         await cacheIcon(`custom:${customId}`, msg.dataUri);
-        await setAssignment(msg.mac, { kind: 'custom', customId, label: msg.label });
+        await serialized(() => setAssignment(msg.mac, { kind: 'custom', customId, label: msg.label }));
         return { ok: true, dataUri: msg.dataUri };
       }
       case 'unassign':
-        await removeAssignment(msg.mac);
+        await serialized(() => removeAssignment(msg.mac));
         return { ok: true };
+      case 'import': {
+        const counts = await serialized(() => importAll(msg.file as Parameters<typeof importAll>[0]));
+        return { ok: true, counts };
+      }
       case 'search': {
         const index = await fetchIndex();
         return { ok: true, results: searchDevices(index.devices, msg.query) };
@@ -125,8 +145,12 @@ export default defineBackground(() => {
   });
   browser.alarms.create('ubicon-refresh', { periodInMinutes: 720 });
   browser.alarms.onAlarm.addListener(a => { if (a.name === 'ubicon-refresh') fetchIndex(true).catch(() => {}); });
-  browser.storage.onChanged.addListener((_changes, area) => {
-    if (area === 'sync') hydrateMissingIcons().catch(() => {});
+  browser.storage.onChanged.addListener((changes, area) => {
+    // Assignments live in storage.sync in browser mode and under the single
+    // 'assignments' key of storage.local otherwise (see shared/storage.ts).
+    // Anything else in storage.local (icon blobs, the index, names) must not
+    // trigger a hydrate, or caching an icon would loop back into this.
+    if (area === 'sync' || (area === 'local' && 'assignments' in changes)) hydrateMissingIcons().catch(() => {});
   });
   browser.runtime.onInstalled.addListener(() => {
     ensureRegisteredOrigins().catch(() => {});

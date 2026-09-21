@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import { exportAll, getAllAssignments, getCachedIcon, getIndexCache, iconKey, importAll, removeAssignment } from '../../shared/storage';
+import { exportAll, getAllAssignments, getCachedIcon, getIndexCache, iconKey } from '../../shared/storage';
 import { addConsoleOrigin, listConsoleOrigins, removeConsoleOrigin } from '../../shared/consoles';
 import type { UbiconMsg, UbiconReply } from '../../shared/messages';
 
@@ -55,7 +55,9 @@ async function renderList() {
         return;
       }
       clearTimeout(confirmTimer);
-      await removeAssignment(mac);
+      // Through the background worker, not shared/storage.ts directly: every
+      // change to assignments goes through its single write queue.
+      await send({ type: 'unassign', mac });
       renderList();
     });
     if (ref.kind === 'custom') {
@@ -187,7 +189,10 @@ $('import-file').addEventListener('change', async e => {
   const f = (e.target as HTMLInputElement).files?.[0];
   if (!f) return;
   try {
-    const counts = await importAll(JSON.parse(await f.text()));
+    // Through the background worker's write queue, like every other change.
+    const reply = await send({ type: 'import', file: JSON.parse(await f.text()) });
+    if (!reply.ok) throw new Error(reply.error);
+    const counts = reply.counts ?? { assignments: 0, customIcons: 0 };
     $('db-status').textContent = `imported ${counts.assignments} assignments, ${counts.customIcons} custom icons`;
     renderList();
   } catch (err) {

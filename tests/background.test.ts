@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { handleMessage, hydrateMissingIcons, ensureRegisteredOrigins } from '../entrypoints/background';
-import { setIndexCache, getAssignment, getCachedIcon, setAssignment } from '../shared/storage';
+import { setIndexCache, getAssignment, getAllAssignments, getCachedIcon, migrateToLocal, setAssignment } from '../shared/storage';
 import type { DbIndex } from '../shared/types';
 
 const IDX: DbIndex = { schema: 1, generatedAt: 't', count: 1, devices: [
@@ -136,4 +136,35 @@ test('ensureRegisteredOrigins derives ids from host (hostname+port) for a stored
     expect.objectContaining({ id: 'ubicon-10.71.0.5-8443', matches: ['https://10.71.0.5:8443/*'] }),
     expect.objectContaining({ id: 'ubicon-bridge-10.71.0.5-8443', world: 'MAIN' }),
   ]);
+});
+
+test('import message imports through the background worker and reports counts', async () => {
+  const r = await handleMessage({
+    type: 'import',
+    file: {
+      format: 'ubicon-backup', version: 2, exportedAt: 't',
+      assignments: { 'd4:3d:39:80:fc:80': { ref: { kind: 'db', deviceId: 'lockly-smart-lock' }, t: 1 } },
+      tombstones: {}, customIcons: { c1: 'data:image/png;base64,CUSTOM' },
+    },
+  });
+  expect(r).toEqual({ ok: true, counts: { assignments: 1, customIcons: 1 } });
+  expect(await getAssignment('d4:3d:39:80:fc:80')).toEqual({ kind: 'db', deviceId: 'lockly-smart-lock' });
+});
+
+test('import message reports a bad file as an error reply, not a throw', async () => {
+  const r = await handleMessage({ type: 'import', file: { format: 'nope' } });
+  expect(r).toEqual({ ok: false, error: 'Not an Ubicon backup file' });
+});
+
+test('writes are serialized: concurrent changes in github mode all survive', async () => {
+  // Outside browser mode every assignment lives under one storage.local key,
+  // so two unserialized read-modify-write cycles would lose one of the writes.
+  await migrateToLocal('github');
+  const macs = Array.from({ length: 8 }, (_, i) => `aa:bb:cc:dd:ee:0${i}`);
+  await Promise.all(macs.map(mac =>
+    handleMessage({ type: 'assign-custom', mac, dataUri: 'data:image/png;base64,Q', label: mac })));
+  expect(Object.keys(await getAllAssignments()).sort()).toEqual(macs);
+
+  await Promise.all(macs.map(mac => handleMessage({ type: 'unassign', mac })));
+  expect(await getAllAssignments()).toEqual({});
 });
