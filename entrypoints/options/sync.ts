@@ -12,7 +12,7 @@ import { REPO_RE, decodeSetupCode, looksLikeToken } from '../../shared/sync/setu
 import { SETUP_CODE_FILENAME, setupCodeFileText } from '../../shared/sync/ui-text';
 import {
   BAD_REPO_TEXT, CLASSIC_TOKEN_TEXT, NEW_REPO_URL, NEW_TOKEN_URL, NOT_A_SETUP_CODE_TEXT,
-  PASTED_TOKEN_NOT_CODE_TEXT, PERMISSION_DENIED_TEXT, SECRET_TEXT, SIGNUP_URL, TOKENS_URL,
+  GUIDE_URL, PASTED_TOKEN_NOT_CODE_TEXT, PERMISSION_DENIED_TEXT, SECRET_TEXT, SIGNUP_URL, TOKENS_URL,
   checklistLabels, clearWizardStep, disconnectedText, expiryWarning, fixCardFor, hintText,
   iconsSyncedText, loadWizardStep, repoSettingsUrl, repoUrl, runningLine,
   saveWizardStep, statusText, WIZARD_STEP_KEY,
@@ -34,6 +34,7 @@ const LINKS: Record<string, string> = {
   'new-repo': NEW_REPO_URL,
   'new-token': NEW_TOKEN_URL,
   'signup': SIGNUP_URL,
+  'guide': GUIDE_URL,
 };
 
 // ---- the live checklist ----

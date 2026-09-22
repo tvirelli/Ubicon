@@ -38,7 +38,9 @@ icons are saved to a private repository in your own GitHub account, and every
 browser you connect stays in step through it. There is no item limit, custom
 icons sync too, and it works across Chrome, Edge and Firefox, signed in to the
 browser or not. A free GitHub account is enough. The author of Ubicon never
-sees your data; see the [privacy policy](PRIVACY.md).
+sees your data; see the [privacy policy](PRIVACY.md). The full reference,
+with every question we could think of, is the
+[GitHub sync guide](https://www.tonyvirelli.com/ubicon/github-sync.html).
 
 ### First browser (about 3 minutes)
 
