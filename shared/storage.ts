@@ -91,8 +91,10 @@ export async function setAssignment(mac: string, ref: AssignmentRef, t?: number)
     await browser.storage.sync.set({ [A(mac)]: encode(ref, t ?? Date.now()) });
     return;
   }
-  t ??= await stampNow();
   const m = await readLocalArea();
+  // Strictly later than whatever this replaces, so it wins the merge even
+  // when both land in the same millisecond (ties go to the repo).
+  t ??= Math.max(await stampNow(), (m.tombstones[mac] ?? 0) + 1, (m.assignments[mac]?.t ?? 0) + 1);
   m.assignments[mac] = { ref, t };
   delete m.tombstones[mac];
   await writeManifest(m);
@@ -111,8 +113,9 @@ export async function removeAssignment(mac: string): Promise<void> {
     // A tombstone, not just a delete: the removal has to win the next merge
     // against the older assignment other browsers and the repo still hold.
     const m = await readLocalArea();
+    // Strictly later than the assignment it removes (see setAssignment).
+    m.tombstones[mac] = Math.max(await stampNow(), (m.assignments[mac]?.t ?? 0) + 1);
     delete m.assignments[mac];
-    m.tombstones[mac] = await stampNow();
     await writeManifest(m);
   }
   if (ref?.kind === 'custom') {

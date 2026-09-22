@@ -160,3 +160,13 @@ test('importAll rejects files that are not Ubicon backups', async () => {
   await expect(importAll({ format: 'nope', version: 2 } as never)).rejects.toThrow('Not an Ubicon backup file');
   await expect(importAll({ format: 'ubicon-backup', version: 3 } as never)).rejects.toThrow('Not an Ubicon backup file');
 });
+
+test('a removal is stamped later than the assignment it removes, even within the same millisecond', async () => {
+  vi.useFakeTimers({ now: 1_790_000_000_000 });
+  await migrateToLocal('github');
+  await setAssignment(MAC1, db('a'));
+  await removeAssignment(MAC1);
+  expect((await readManifest()).tombstones[MAC1]).toBe(1_790_000_000_001);
+  await setAssignment(MAC1, db('b'));
+  expect((await readManifest()).assignments[MAC1]?.t).toBe(1_790_000_000_002);
+});
