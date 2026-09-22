@@ -1,20 +1,415 @@
 <!doctype html>
-<html>
-  <head><meta charset="utf-8" /><title>Ubicon settings</title></head>
-  <body style="font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 2rem auto; padding: 0 1rem;">
-    <h1 style="font-size: 18px;">Ubicon settings</h1>
-    <h2 style="font-size: 14px;">Local UniFi controllers</h2>
-    <p style="font-size: 13px; color: #6b7280;">
-      unifi.ui.com works out of the box. To use Ubicon on a local console
-      (UDM, Cloud Key, self-hosted), add its address; your browser will ask
-      you to grant access to that site.
-    </p>
-    <form id="add" style="display: flex; gap: 8px;">
-      <input id="url" type="url" required placeholder="https://192.168.1.1" style="flex: 1; padding: 7px 10px;" />
-      <button style="padding: 7px 14px;">Add</button>
-    </form>
-    <p id="msg" style="font-size: 12px; color: #6b7280;"></p>
-    <ul id="origins" style="font-size: 13px; padding-left: 1.2em;"></ul>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- A full tab, not the small embedded panel: the GitHub sync wizard sends
+         the user to GitHub and back, and needs room for its pictures. -->
+    <meta name="manifest.open_in_tab" content="true" />
+    <title>Ubicon settings</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <!-- ============ The normal Options page ============ -->
+    <div id="page" class="page">
+      <header class="masthead">
+        <img src="/icon/48.png" alt="" width="32" height="32" />
+        <h1>Ubicon settings</h1>
+      </header>
+
+      <aside id="hint" class="notice" aria-label="GitHub sync is on in another browser" hidden>
+        <p id="hint-text"></p>
+        <div class="notice-actions">
+          <button id="hint-enter" type="button" class="btn small primary">Enter setup code</button>
+          <button id="hint-dismiss" type="button" class="btn small">Dismiss</button>
+        </div>
+      </aside>
+
+      <section id="sync" class="block" aria-labelledby="sync-h">
+        <h2 id="sync-h">GitHub sync</h2>
+
+        <!-- Not connected -->
+        <div id="sync-off">
+          <p class="lead">
+            See the same icons in every browser you use. Ubicon saves your icon
+            choices and custom icons to a private folder in your own GitHub
+            account, and each browser you connect reads from it.
+          </p>
+          <ul class="facts">
+            <li>Optional. Ubicon works exactly as before without it.</li>
+            <li>Free. A free GitHub account is enough.</li>
+            <li>Ubicon can only ever see that one private folder, and its author receives nothing.</li>
+          </ul>
+          <p class="quiet">Questions first? <a data-href="guide" target="_blank" rel="noopener">Read the GitHub sync guide</a>: tokens, view-only access, multiple browsers, what is in the repository, and troubleshooting.</p>
+          <div class="actions">
+            <button id="setup-start" type="button" class="btn primary">Set up GitHub sync</button>
+            <button id="setup-code" type="button" class="link">I have a setup code</button>
+          </div>
+        </div>
+
+        <!-- Connected -->
+        <div id="sync-on" hidden>
+          <div id="sync-status-box" class="status" data-tone="ok">
+            <span class="status-mark" aria-hidden="true"></span>
+            <p id="sync-status" role="status"></p>
+          </div>
+          <p class="repo-line">
+            Your private folder:
+            <a id="sync-repo" target="_blank" rel="noopener"></a>
+            <span id="view-only-badge" class="badge" hidden>View-only</span>
+          </p>
+          <p id="view-only-note" class="quiet" hidden>
+            This browser is connected with a view-only token. It shows the
+            synced icons and receives updates, but icons cannot be changed here.
+          </p>
+          <p id="expiry" class="warn-line" hidden></p>
+          <div id="paused-fix"></div>
+
+          <div class="controls">
+            <button id="sync-now" type="button" class="btn small primary">Sync now</button>
+            <button id="show-code" type="button" class="btn small" aria-expanded="false" aria-controls="code-panel">Show setup code</button>
+            <button id="replace-open" type="button" class="btn small" aria-expanded="false" aria-controls="replace-panel">Replace token</button>
+            <button id="disconnect-open" type="button" class="btn small" aria-expanded="false" aria-controls="disconnect-panel">Disconnect</button>
+          </div>
+
+          <div id="code-panel" hidden></div>
+
+          <div id="replace-panel" class="panel" hidden>
+            <h3>Replace token</h3>
+            <p>
+              Paste a new token for the same private folder. Use this when the
+              old token expired or was deleted on GitHub.
+              <a id="replace-new-token" target="_blank" rel="noopener">Create a new token on GitHub</a>,
+              and remember to set Repository access to Only select repositories.
+            </p>
+            <label for="new-token">New token</label>
+            <div class="secret-field">
+              <input id="new-token" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" />
+              <button type="button" class="btn small" data-reveal="new-token" aria-pressed="false">Show</button>
+            </div>
+            <p id="replace-note" class="field-note" role="alert"></p>
+            <div class="actions">
+              <button id="replace-go" type="button" class="btn small primary">Replace token</button>
+              <button id="replace-cancel" type="button" class="link">Cancel</button>
+            </div>
+            <ol id="replace-checks" class="checks" aria-live="polite" hidden></ol>
+            <div id="replace-fix"></div>
+          </div>
+
+          <div id="disconnect-panel" class="panel" hidden>
+            <h3>Disconnect this browser?</h3>
+            <ul class="facts">
+              <li>Only this browser is affected. Your other browsers keep syncing.</li>
+              <li>Your icons stay in this browser.</li>
+              <li>The GitHub repo is not touched.</li>
+            </ul>
+            <label class="check">
+              <input id="remove-hint" type="checkbox" />
+              <span>Also stop suggesting GitHub sync on my other browsers</span>
+            </label>
+            <div class="actions">
+              <button id="disconnect-go" type="button" class="btn small danger">Disconnect</button>
+              <button id="disconnect-cancel" type="button" class="link">Cancel</button>
+            </div>
+            <p id="disconnect-note" class="field-note" role="alert"></p>
+          </div>
+        </div>
+
+        <!-- Just disconnected -->
+        <div id="sync-gone" hidden>
+          <div class="status" data-tone="ok">
+            <span class="status-mark" aria-hidden="true"></span>
+            <p id="gone-text" role="status"></p>
+          </div>
+          <p>
+            This browser is disconnected. If you no longer want the data on
+            GitHub, you can delete the folder from
+            <a id="gone-repo" target="_blank" rel="noopener">its settings page</a>
+            (Danger Zone, Delete this repository) and delete the token from
+            <a id="gone-tokens" target="_blank" rel="noopener">your token list</a>.
+            Skip this if other browsers still use them.
+          </p>
+          <div class="actions">
+            <button id="gone-done" type="button" class="btn small">Done</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="consoles-block" class="block" aria-labelledby="consoles-h">
+        <h2 id="consoles-h">Local UniFi controllers</h2>
+        <p>
+          unifi.ui.com works out of the box. To use Ubicon on a local console
+          (UDM, Cloud Key, self-hosted), add its address; your browser will ask
+          you to grant access to that site.
+        </p>
+        <form id="add" class="add-form">
+          <label for="url" class="vh">Console address</label>
+          <input id="url" type="url" required placeholder="https://192.168.1.1" />
+          <button class="btn small">Add</button>
+        </form>
+        <p id="msg" class="field-note" role="status"></p>
+        <ul id="origins" class="origins"></ul>
+      </section>
+    </div>
+
+    <!-- ============ The GitHub sync wizard ============ -->
+    <main id="wizard" class="wizard" hidden>
+      <div class="card">
+        <div class="progress">
+          <ol id="steps" class="steps" aria-label="Setup steps">
+            <li data-step="repo"><span class="dot" aria-hidden="true">1</span><span class="step-label">Create repo</span><span class="vh step-state"></span></li>
+            <li data-step="token"><span class="dot" aria-hidden="true">2</span><span class="step-label">Create token</span><span class="vh step-state"></span></li>
+            <li data-step="connect"><span class="dot" aria-hidden="true">3</span><span class="step-label">Connect</span><span class="vh step-state"></span></li>
+          </ol>
+          <p id="eta" class="eta">About 3 minutes</p>
+        </div>
+
+        <!-- Intro -->
+        <section class="screen" data-screen="intro" aria-labelledby="intro-h" hidden>
+          <h2 id="intro-h" tabindex="-1">Sync your icons through GitHub</h2>
+          <p class="lead">
+            Your icon choices and custom icons are saved to a private folder in
+            your own GitHub account. Every browser you connect shows the same icons.
+          </p>
+          <dl class="plain">
+            <dt>What will happen</dt>
+            <dd>
+              You create a private folder on GitHub, then a key that opens only
+              that folder, and paste the key here. Two GitHub pages open with
+              their forms already filled in.
+            </dd>
+            <dt>What it costs</dt>
+            <dd>Nothing. A free GitHub account is enough.</dd>
+            <dt>What Ubicon will be able to see</dt>
+            <dd>
+              Only that one folder. Ubicon refuses any key that opens more than
+              that. Nothing is sent to Ubicon's author.
+            </dd>
+          </dl>
+          <div class="actions">
+            <button type="button" class="btn primary big" data-goto="repo">Start</button>
+          </div>
+          <p class="links">
+            <button type="button" class="link" data-back>Not now</button>
+            <a data-href="signup" target="_blank" rel="noopener">I don't have a GitHub account</a>
+            <a data-href="guide" target="_blank" rel="noopener">Read the guide</a>
+            <button type="button" class="link" data-goto="code">I have a setup code</button>
+          </p>
+        </section>
+
+        <!-- Step 1 -->
+        <section class="screen" data-screen="repo" aria-labelledby="repo-h" hidden>
+          <h2 id="repo-h" tabindex="-1">Create your private folder</h2>
+          <p class="lead">
+            GitHub calls it a repository, or repo: a private folder on GitHub
+            that only you can see. Ubicon keeps your icon choices in it. The
+            form arrives filled in, so there is nothing to type.
+          </p>
+          <div class="guide">
+            <div>
+              <h3>On the GitHub page</h3>
+              <ol class="clicks">
+                <li>Check that <b>Repository name</b> says <code>ubicon-sync</code>.</li>
+                <li>Check that <b>Private</b> is selected.</li>
+                <li>Click <b>Create repository</b>, then come back to this tab.</li>
+              </ol>
+              <p class="quiet">If GitHub asks you to sign in first, sign in and the filled-in form appears next.</p>
+            </div>
+            <figure class="shot">
+              <div class="gh" role="img" aria-label="Simplified drawing of GitHub's new repository form. Callout 1: the Repository name field already says ubicon-sync. Callout 2: of Public and Private, Private is selected. Callout 3: the green Create repository button at the bottom of the form.">
+                <div class="gh-title">Create a new repository</div>
+                <div class="gh-label">Repository name</div>
+                <div class="gh-line"><span class="gh-input">ubicon-sync</span><span class="pin">1</span></div>
+                <div class="gh-label">Visibility</div>
+                <div class="gh-line"><span class="gh-radio"></span><span class="gh-text">Public</span></div>
+                <div class="gh-line"><span class="gh-radio on"></span><span class="gh-text">Private</span><span class="pin">2</span></div>
+                <div class="gh-rule"></div>
+                <div class="gh-line"><span class="gh-btn">Create repository</span><span class="pin">3</span></div>
+              </div>
+              <figcaption>What you will see on GitHub. A simplified drawing, not the real page.</figcaption>
+            </figure>
+          </div>
+          <div class="actions">
+            <a class="btn primary big" data-open="repo" data-href="new-repo" target="_blank" rel="noopener">Open GitHub</a>
+            <button type="button" class="btn primary big" data-done="repo" data-goto="token" hidden>I did this, next</button>
+          </div>
+          <p class="links">
+            <button type="button" class="link" data-back>Back</button>
+            <a data-again="repo" data-href="new-repo" target="_blank" rel="noopener" hidden>Open GitHub again</a>
+            <button type="button" class="link" data-skip="repo" data-goto="token">I already did this</button>
+            <a data-href="signup" target="_blank" rel="noopener">I don't have a GitHub account</a>
+          </p>
+        </section>
+
+        <!-- Step 2 -->
+        <section class="screen" data-screen="token" aria-labelledby="token-h" hidden>
+          <h2 id="token-h" tabindex="-1">Create your access token</h2>
+          <p class="lead">
+            A token is a key that lets Ubicon save to that one folder and
+            nothing else. GitHub fills in most of the form, but one setting you
+            have to change yourself.
+          </p>
+          <div class="warning" role="note">
+            <span class="warning-mark" aria-hidden="true">!</span>
+            <p>
+              On the GitHub page, change <b>Repository access</b> to
+              <b>Only select repositories</b> and pick <b>ubicon-sync</b>. Ubicon
+              will refuse a token that can reach your other repos.
+            </p>
+          </div>
+          <div class="guide">
+            <div>
+              <h3>On the GitHub page</h3>
+              <ol class="clicks">
+                <li>Under <b>Repository access</b>, choose <b>Only select repositories</b>.</li>
+                <li>Click <b>Select repositories</b> and pick <code>ubicon-sync</code>.</li>
+                <li>Scroll to the bottom and click <b>Generate token</b>. If GitHub shows a summary, click <b>Generate token</b> again.</li>
+                <li>Click the copy icon next to the new token, then come back to this tab. GitHub shows the token only once.</li>
+              </ol>
+            </div>
+            <div class="shots">
+              <figure class="shot">
+                <div id="fig-access" class="gh" role="img" aria-label="Simplified drawing of the Repository access part of GitHub's token form. Of the choices Public repositories, All repositories and Only select repositories, callout 1 marks Only select repositories, which is selected. Callout 2: in the Select repositories list underneath, ubicon-sync is ticked. Callout 3: the green Generate token button at the bottom of the form.">
+                  <div class="gh-title">Repository access</div>
+                  <div class="gh-line"><span class="gh-radio"></span><span class="gh-text">Public repositories</span></div>
+                  <div class="gh-line"><span class="gh-radio"></span><span class="gh-text">All repositories</span></div>
+                  <div class="gh-line"><span class="gh-radio on"></span><span class="gh-text">Only select repositories</span><span class="pin">1</span></div>
+                  <div class="gh-indent">
+                    <div class="gh-line"><span class="gh-select">Select repositories</span></div>
+                    <div class="gh-menu">
+                      <div class="gh-line"><span class="gh-tick"></span><span class="gh-text">ubicon-sync</span><span class="pin">2</span></div>
+                    </div>
+                  </div>
+                  <div class="gh-rule"></div>
+                  <div class="gh-line"><span class="gh-btn">Generate token</span><span class="pin">3</span></div>
+                </div>
+                <figcaption>What you will see on GitHub. A simplified drawing, not the real page.</figcaption>
+              </figure>
+              <figure class="shot">
+                <div class="gh" role="img" aria-label="Simplified drawing of the page GitHub shows after the token is made. The new token, a long code that starts with github_pat_, is shown once. Callout 4 marks the copy icon right next to it.">
+                  <div class="gh-title">Make sure to copy your token now</div>
+                  <div class="gh-line">
+                    <span class="gh-token">github_pat_11AB...x9Qz</span>
+                    <span class="gh-copy">
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 3.5v-.5a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    </span>
+                    <span class="pin">4</span>
+                  </div>
+                </div>
+                <figcaption>The token appears once, right after you generate it.</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="actions">
+            <a class="btn primary big" data-open="token" data-href="new-token" target="_blank" rel="noopener">Open GitHub</a>
+            <button type="button" class="btn primary big" data-done="token" data-goto="connect" hidden>I did this, next</button>
+          </div>
+          <p class="links">
+            <button type="button" class="link" data-back>Back</button>
+            <a data-again="token" data-href="new-token" target="_blank" rel="noopener" hidden>Open GitHub again</a>
+            <button type="button" class="link" data-skip="token" data-goto="connect">I already have the token</button>
+          </p>
+        </section>
+
+        <!-- Step 3 -->
+        <section class="screen" data-screen="connect" aria-labelledby="connect-h" hidden>
+          <h2 id="connect-h" tabindex="-1">Paste your token</h2>
+          <p class="lead">
+            Paste the token you just copied on GitHub. It starts with
+            <code>github_pat_</code>. Ubicon checks it before saving anything.
+          </p>
+          <label for="token">Your token</label>
+          <div class="secret-field">
+            <input id="token" class="big-input" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" aria-describedby="token-note" />
+            <button type="button" class="btn small" data-reveal="token" aria-pressed="false">Show</button>
+          </div>
+          <div id="classic" class="inline-card" hidden>
+            <p id="classic-text"></p>
+            <button type="button" class="btn small" data-goto="token">Back to step 2</button>
+          </div>
+          <div id="repo-field" hidden>
+            <label for="repo">Repository, as owner/name</label>
+            <input id="repo" type="text" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="yourname/ubicon-sync" />
+          </div>
+          <p id="token-note" class="field-note" role="alert"></p>
+          <div class="actions">
+            <button id="connect" type="button" class="btn primary big">Connect</button>
+          </div>
+          <ol id="connect-checks" class="checks" aria-live="polite" hidden></ol>
+          <div id="connect-fix"></div>
+          <p class="links">
+            <button type="button" class="link" data-back>Back</button>
+          </p>
+        </section>
+
+        <!-- Setup code, for every browser after the first -->
+        <section class="screen" data-screen="code" aria-labelledby="code-h" hidden>
+          <h2 id="code-h" tabindex="-1">Connect with a setup code</h2>
+          <p class="lead">
+            On the browser where you set up sync, open Ubicon's options and
+            click Show setup code. Copy it and paste it here.
+          </p>
+          <p id="code-repo-line" class="quiet" hidden></p>
+          <label for="code">Setup code</label>
+          <div class="secret-field">
+            <input id="code" class="big-input" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" aria-describedby="code-note" />
+            <button type="button" class="btn small" data-reveal="code" aria-pressed="false">Show</button>
+          </div>
+          <p id="code-note" class="field-note" role="alert"></p>
+          <div class="actions">
+            <button id="code-connect" type="button" class="btn primary big">Connect</button>
+          </div>
+          <ol id="code-checks" class="checks" aria-live="polite" hidden></ol>
+          <div id="code-fix"></div>
+          <p class="links">
+            <button type="button" class="link" data-back>Back</button>
+            <button type="button" class="link" data-goto="token">Create a new token instead</button>
+          </p>
+        </section>
+
+        <!-- Success -->
+        <section class="screen success" data-screen="success" aria-labelledby="success-h" hidden>
+          <svg class="big-check" viewBox="0 0 64 64" width="72" height="72" aria-hidden="true" focusable="false">
+            <circle cx="32" cy="32" r="29" />
+            <path d="M19 33.5l9 9 17-19" />
+          </svg>
+          <h2 id="success-h" tabindex="-1"></h2>
+          <p class="lead">
+            Synced just now to your private folder,
+            <a id="success-repo" target="_blank" rel="noopener"></a>.
+          </p>
+          <p id="success-view-only" class="quiet" hidden>This browser is connected with a view-only token.</p>
+          <p id="success-others">Your other browsers keep working as before. Paste the setup code there to bring them in.</p>
+          <div id="success-code"></div>
+          <div class="actions">
+            <button id="success-done" type="button" class="btn primary big">Done</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- The drawing that goes with the "token can reach too much" fix. Its
+         callouts match that fix's numbered list, so it is a separate drawing
+         from step 2's. sync.ts copies it into the fix card. -->
+    <template id="fig-fix-access">
+      <figure class="shot">
+        <div class="gh" role="img" aria-label="Simplified drawing of the Repository access part of GitHub's edit token form. Callout 2: Only select repositories is selected, not All repositories. Callout 3: in the Select repositories list underneath, ubicon-sync is ticked. Callout 4: the green Update button at the bottom of the form.">
+          <div class="gh-title">Repository access</div>
+          <div class="gh-line"><span class="gh-radio"></span><span class="gh-text">All repositories</span></div>
+          <div class="gh-line"><span class="gh-radio on"></span><span class="gh-text">Only select repositories</span><span class="pin">2</span></div>
+          <div class="gh-indent">
+            <div class="gh-line"><span class="gh-select">Select repositories</span></div>
+            <div class="gh-menu">
+              <div class="gh-line"><span class="gh-tick"></span><span class="gh-text">ubicon-sync</span><span class="pin">3</span></div>
+            </div>
+          </div>
+          <div class="gh-rule"></div>
+          <div class="gh-line"><span class="gh-btn">Update</span><span class="pin">4</span></div>
+        </div>
+        <figcaption>What you will see on GitHub. A simplified drawing, not the real page.</figcaption>
+      </figure>
+    </template>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

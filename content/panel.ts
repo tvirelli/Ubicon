@@ -6,6 +6,28 @@ import { currentPanelMac } from './state';
 const send = (msg: UbiconMsg) => browser.runtime.sendMessage(msg) as Promise<UbiconReply>;
 const isDark = () => !!document.querySelector('[class*="-dark__"]');
 
+// Everything in this file is built node by node, never from an HTML string,
+// so no markup is ever assigned through innerHTML. el() keeps that readable. Attributes are given the way the markup would
+// spell them ('class', 'data-tab', '' for a boolean attribute); children are
+// nodes, or strings that become text.
+type Attrs = Record<string, string>;
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = {}, ...children: (Node | string)[]): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
+  node.append(...children);
+  return node;
+}
+
+// SVG nodes need their namespace: createElement('svg') yields an unknown
+// HTML element that lays out as nothing, without any error.
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag: string, attrs: Attrs, ...children: Node[]): SVGElement {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
+  node.append(...children);
+  return node;
+}
+
 const CSS = `
   :host { all: initial; }
   * { box-sizing: border-box; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -78,7 +100,12 @@ export function showTip(text: string): void {
   document.body.append(host);
 }
 
-const MODAL_BTN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="18" height="18"><path d="M23 30 V86 A19 19 0 0 0 42 105 H86 A19 19 0 0 0 105 86 V52" fill="none" stroke="#5B3FD1" stroke-width="14" stroke-linecap="round"></path><rect x="98" y="23" width="14" height="14" rx="4" fill="#5B3FD1"></rect><rect x="44" y="44" width="40" height="40" rx="10" fill="#5B3FD1"></rect></svg>`;
+// The Ubicon mark (design/ubicon-icon.svg), drawn at the given pixel size.
+const ubiconMark = (size: number) =>
+  svgEl('svg', { xmlns: SVG_NS, viewBox: '0 0 128 128', width: String(size), height: String(size) },
+    svgEl('path', { d: 'M23 30 V86 A19 19 0 0 0 42 105 H86 A19 19 0 0 0 105 86 V52', fill: 'none', stroke: '#5B3FD1', 'stroke-width': '14', 'stroke-linecap': 'round' }),
+    svgEl('rect', { x: '98', y: '23', width: '14', height: '14', rx: '4', fill: '#5B3FD1' }),
+    svgEl('rect', { x: '44', y: '44', width: '40', height: '40', rx: '10', fill: '#5B3FD1' }));
 
 const MODAL_BTN_CSS = `
   :host { all: initial; }
@@ -98,9 +125,7 @@ export function ensureModalButton(root: ParentNode): void {
     const shadow = host.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
     style.textContent = MODAL_BTN_CSS;
-    const holder = document.createElement('span');
-    holder.innerHTML = MODAL_BTN_SVG;
-    shadow.append(style, holder.firstElementChild!);
+    shadow.append(style, ubiconMark(18));
     host.addEventListener('click', () => {
       const mac = currentPanelMac(document);
       if (mac) openAssignPanel(mac);
@@ -110,7 +135,6 @@ export function ensureModalButton(root: ParentNode): void {
 }
 
 const HEADER_BADGE_ID = 'ubicon-header-badge';
-const HEADER_BADGE_SVG = MODAL_BTN_SVG.replace('width="18" height="18"', 'width="16" height="16"');
 
 const HEADER_BADGE_CSS = `
   :host { all: initial; }
@@ -128,9 +152,7 @@ export function ensureHeaderBadge(root: ParentNode): void {
   const shadow = host.attachShadow({ mode: 'closed' });
   const style = document.createElement('style');
   style.textContent = HEADER_BADGE_CSS;
-  const holder = document.createElement('span');
-  holder.innerHTML = HEADER_BADGE_SVG;
-  shadow.append(style, holder.firstElementChild!);
+  shadow.append(style, ubiconMark(16));
   svg.insertAdjacentElement('afterend', host);
 }
 
@@ -146,17 +168,17 @@ export function openAssignPanel(mac: string): void {
   overlay.className = 'overlay';
   const dlg = document.createElement('div');
   dlg.className = 'dlg' + (isDark() ? ' dark' : '');
-  dlg.innerHTML = `
-    <header><span>Ubicon: assign icon</span><button data-x aria-label="Close">✕</button></header>
-    <div class="tabs">
-      <button data-tab="db" class="on">Community database</button>
-      <button data-tab="custom">Custom icon</button>
-    </div>
-    <div class="body"></div>`;
-  const body = dlg.querySelector('.body') as HTMLElement;
+  const closeBtn = el('button', { 'data-x': '', 'aria-label': 'Close' }, '✕');
+  const body = el('div', { class: 'body' });
+  dlg.append(
+    el('header', {}, el('span', {}, 'Ubicon: assign icon'), closeBtn),
+    el('div', { class: 'tabs' },
+      el('button', { 'data-tab': 'db', class: 'on' }, 'Community database'),
+      el('button', { 'data-tab': 'custom' }, 'Custom icon')),
+    body);
   const close = () => host.remove();
   overlay.addEventListener('click', close);
-  dlg.querySelector('[data-x]')!.addEventListener('click', close);
+  closeBtn.addEventListener('click', close);
   dlg.addEventListener('keydown', e => { e.stopPropagation(); if ((e as KeyboardEvent).key === 'Escape') close(); });
 
   const toast = (text: string) => {
@@ -185,12 +207,12 @@ export function openAssignPanel(mac: string): void {
   };
 
   const renderDbTab = async () => {
-    body.innerHTML = `<input type="search" placeholder="Search devices…">
-      <div class="remove" hidden>Remove Ubicon icon from this device</div>
-      <div class="list"><div class="msg">Loading database…</div></div>`;
-    const input = body.querySelector('input')!;
-    const removeRow = body.querySelector('.remove') as HTMLElement;
-    const list = body.querySelector('.list') as HTMLElement;
+    const msg = (text: string) => el('div', { class: 'msg' }, text);
+    const groupHdr = (text: string) => el('div', { class: 'grouphdr' }, text);
+    const input = el('input', { type: 'search', placeholder: 'Search devices…' });
+    const removeRow = el('div', { class: 'remove', hidden: '' }, 'Remove Ubicon icon from this device');
+    const list = el('div', { class: 'list' }, msg('Loading database…'));
+    body.replaceChildren(input, removeRow, list);
     const { getAssignment } = await import('../shared/storage');
     if (await getAssignment(mac)) {
       removeRow.hidden = false;
@@ -201,32 +223,28 @@ export function openAssignPanel(mac: string): void {
       return fixed[c] ?? c.replace(/_/g, ' ').replace(/\b\w/g, m => m.toUpperCase());
     };
     const addItem = (d: DeviceRecord) => {
-      const item = document.createElement('div');
-      item.className = 'item';
-      item.innerHTML = `<img loading="lazy" alt=""><div><div class="n"></div><div class="m"></div></div>`;
-      (item.querySelector('img') as HTMLImageElement).src =
-        `https://cdn.jsdelivr.net/gh/tvirelli/Ubicon-DB@main/${d.icon}`;
-      item.querySelector('.n')!.textContent = d.name;
-      item.querySelector('.m')!.textContent =
-        d.type === 'generic' ? `Generic ${catLabel(d.category)}` : [d.vendor, d.model].filter(Boolean).join(' · ');
+      const meta = d.type === 'generic' ? `Generic ${catLabel(d.category)}` : [d.vendor, d.model].filter(Boolean).join(' · ');
+      const item = el('div', { class: 'item' },
+        el('img', { loading: 'lazy', alt: '', src: `https://cdn.jsdelivr.net/gh/tvirelli/Ubicon-DB@main/${d.icon}` }),
+        el('div', {}, el('div', { class: 'n' }, d.name), el('div', { class: 'm' }, meta)));
       item.addEventListener('click', async () => finish(await send({ type: 'assign-db', mac, deviceId: d.id }), 'assigned'));
       list.append(item);
     };
     const render = async (query: string) => {
       const reply = await send({ type: 'search', query });
-      if (!reply.ok) { list.innerHTML = `<div class="msg">Database unavailable, check your connection and try Refresh in the Ubicon popup.</div>`; return; }
+      if (!reply.ok) { list.replaceChildren(msg('Database unavailable, check your connection and try Refresh in the Ubicon popup.')); return; }
       const results = (reply as { results?: DeviceRecord[] }).results ?? [];
       const real = results.filter(d => d.type !== 'generic');
       const generic = results.filter(d => d.type === 'generic');
-      list.innerHTML = results.length ? '' : '<div class="msg">No matches. Add it to the community database, see the Ubicon popup for a link.</div>';
+      list.replaceChildren(...(results.length ? [] : [msg('No matches. Add it to the community database, see the Ubicon popup for a link.')]));
       // Branded devices are the primary results; generic device types follow
       // under their own heading as a fallback when there is no exact match.
       if (real.length) {
-        if (generic.length) list.insertAdjacentHTML('beforeend', '<div class="grouphdr">Devices</div>');
+        if (generic.length) list.append(groupHdr('Devices'));
         real.forEach(addItem);
       }
       if (generic.length) {
-        list.insertAdjacentHTML('beforeend', '<div class="grouphdr">Generic device types</div>');
+        list.append(groupHdr('Generic device types'));
         generic.forEach(addItem);
       }
     };
@@ -236,17 +254,12 @@ export function openAssignPanel(mac: string): void {
   };
 
   const renderCustomTab = () => {
-    body.innerHTML = `<div class="custom">
-      <input type="file" accept="image/*">
-      <img class="preview" hidden alt="Preview">
-      <input type="text" placeholder="Label (e.g. Garage sensor)" maxlength="40">
-      <button class="save" disabled>Save custom icon</button>
-      <div class="msg">Stays on this computer only, never uploaded anywhere. Use Export in the Ubicon popup to move it to another machine.</div>
-    </div>`;
-    const file = body.querySelector('input[type=file]') as HTMLInputElement;
-    const preview = body.querySelector('.preview') as HTMLImageElement;
-    const label = body.querySelector('input[type=text]') as HTMLInputElement;
-    const save = body.querySelector('.save') as HTMLButtonElement;
+    const file = el('input', { type: 'file', accept: 'image/*' });
+    const preview = el('img', { class: 'preview', hidden: '', alt: 'Preview' });
+    const label = el('input', { type: 'text', placeholder: 'Label (e.g. Garage sensor)', maxlength: '40' });
+    const save = el('button', { class: 'save', disabled: '' }, 'Save custom icon');
+    body.replaceChildren(el('div', { class: 'custom' }, file, preview, label, save,
+      el('div', { class: 'msg' }, 'Stays on this computer only, never uploaded anywhere. Use Export in the Ubicon popup to move it to another machine.')));
     let dataUri = '';
     file.addEventListener('change', () => {
       const f = file.files?.[0];

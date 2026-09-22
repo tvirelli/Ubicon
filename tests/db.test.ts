@@ -24,6 +24,18 @@ test('matches across name, vendor, model, keywords, case-insensitive', () => {
   expect(searchDevices(IDX.devices, 'zzz')).toEqual([]);
 });
 
+// Generic device types carry no vendor or model. v0.1.0 lowercased both
+// without a guard, so any non-empty query threw once it reached a generic
+// record and the picker reported the database as unavailable.
+test('generic records without vendor or model are searched, not crashed on', () => {
+  const generic: DeviceRecord = { id: 'g', name: 'Bullet IP Camera', type: 'generic', category: 'camera', keywords: ['generic', 'bullet'], icon: 'icons/bullet-ip-camera.png' };
+  const devices = [...IDX.devices, generic];
+  expect(searchDevices(devices, '').map(d => d.id)).toEqual(['a', 'b', 'g']);
+  expect(searchDevices(devices, 'acme').map(d => d.id)).toEqual(['a']);
+  expect(searchDevices(devices, 'BULLET').map(d => d.id)).toEqual(['g']);
+  expect(iconUrlFor(generic)).toBe('https://cdn.jsdelivr.net/gh/tvirelli/Ubicon-DB@main/icons/bullet-ip-camera.png');
+});
+
 test('iconUrlFor builds the jsDelivr URL', () => {
   expect(iconUrlFor(dev({ icon: 'icons/a.png' })))
     .toBe('https://cdn.jsdelivr.net/gh/tvirelli/Ubicon-DB@main/icons/a.png');

@@ -2,11 +2,18 @@ import { browser } from 'wxt/browser';
 import type { UbiconMsg, UbiconReply } from '../shared/messages';
 import { fetchIndex, iconUrlFor, searchDevices } from '../shared/db';
 import {
-  cacheIcon, getAllAssignments, getCachedIcon, iconKey,
+  cacheIcon, getAllAssignments, getCachedIcon, iconKey, importAll,
   removeAssignment, setAssignment,
 } from '../shared/storage';
 import { registrationsForOrigin } from '../shared/registrations';
 import { addConsoleOrigin } from '../shared/consoles';
+import { serialized } from '../shared/write-queue';
+import {
+  SetupError, connect, disconnect, getCredentials, getStatus, isViewOnly, markDirty, replaceToken, syncOnce,
+} from '../shared/sync/engine';
+import { dismissHint, readHint, shouldShowHint } from '../shared/sync/hint';
+import { encodeSetupCode } from '../shared/sync/setup-code';
+import { getSyncMode } from '../shared/storage';
 
 async function blobToDataUri(blob: Blob): Promise<string> {
   const buf = new Uint8Array(await blob.arrayBuffer());
@@ -26,23 +33,37 @@ async function downloadDbIcon(deviceId: string): Promise<string> {
   return dataUri;
 }
 
+const CHANGES_ASSIGNMENTS = new Set<UbiconMsg['type']>(['assign-db', 'assign-custom', 'unassign', 'import']);
+
 export async function handleMessage(msg: UbiconMsg): Promise<UbiconReply> {
   try {
+    // One check here covers every page that can send a change (the UniFi
+    // page's picker, the popup, Options); the pages also disable their
+    // controls, but this is the one that cannot be bypassed.
+    if (CHANGES_ASSIGNMENTS.has(msg.type) && (await isViewOnly())) {
+      return { ok: false, error: 'This browser is connected with a view-only token.', reason: 'view-only' };
+    }
     switch (msg.type) {
       case 'assign-db': {
+        // The download stays outside the queue: it can take seconds, and it
+        // touches only the icon cache, never the assignment set.
         const dataUri = (await getCachedIcon(`db:${msg.deviceId}`)) ?? (await downloadDbIcon(msg.deviceId));
-        await setAssignment(msg.mac, { kind: 'db', deviceId: msg.deviceId });
+        await serialized(() => setAssignment(msg.mac, { kind: 'db', deviceId: msg.deviceId }));
         return { ok: true, dataUri };
       }
       case 'assign-custom': {
         const customId = crypto.randomUUID();
         await cacheIcon(`custom:${customId}`, msg.dataUri);
-        await setAssignment(msg.mac, { kind: 'custom', customId, label: msg.label });
+        await serialized(() => setAssignment(msg.mac, { kind: 'custom', customId, label: msg.label }));
         return { ok: true, dataUri: msg.dataUri };
       }
       case 'unassign':
-        await removeAssignment(msg.mac);
+        await serialized(() => removeAssignment(msg.mac));
         return { ok: true };
+      case 'import': {
+        const counts = await serialized(() => importAll(msg.file as Parameters<typeof importAll>[0]));
+        return { ok: true, counts };
+      }
       case 'search': {
         const index = await fetchIndex();
         return { ok: true, results: searchDevices(index.devices, msg.query) };
@@ -51,10 +72,62 @@ export async function handleMessage(msg: UbiconMsg): Promise<UbiconReply> {
         const index = await fetchIndex(true);
         return { ok: true, count: index.count };
       }
+      case 'sync-connect': {
+        const connected = await connect({ token: msg.token, repo: msg.repo, readOnly: msg.readOnly });
+        await scheduleSync(true);
+        return { ok: true, connected };
+      }
+      case 'sync-replace-token':
+        await replaceToken(msg.token);
+        return { ok: true, status: await getStatus() };
+      case 'sync-disconnect': {
+        const mode = await disconnect({ removeHint: msg.removeHint });
+        await scheduleSync(false);
+        return { ok: true, mode };
+      }
+      case 'sync-now':
+        await markDirty(); // a full read, not a conditional one: "now" should mean now
+        await syncOnce();
+        return { ok: true, status: await getStatus() };
+      case 'sync-status':
+        return { ok: true, status: await getStatus(), hint: (await shouldShowHint()) ? await readHint() : null };
+      case 'sync-setup-code': {
+        const c = await getCredentials();
+        if (!c) return { ok: false, error: 'Not connected' };
+        return { ok: true, setupCode: encodeSetupCode(c) };
+      }
+      case 'sync-dismiss-hint':
+        await dismissHint();
+        return { ok: true };
     }
   } catch (e) {
+    if (e instanceof SetupError) return { ok: false, error: e.reason, reason: e.reason, others: e.others };
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
+}
+
+const SYNC_ALARM = 'ubicon-sync';
+const SYNC_EVERY_MINUTES = 5;
+const PUSH_DEBOUNCE_MS = 10_000;
+
+// The alarm exists only while this browser is connected, so an unconnected
+// browser makes no GitHub traffic at all.
+export async function scheduleSync(on: boolean): Promise<void> {
+  if (on) browser.alarms.create(SYNC_ALARM, { periodInMinutes: SYNC_EVERY_MINUTES });
+  else await browser.alarms.clear(SYNC_ALARM);
+}
+
+let pushTimer: ReturnType<typeof setTimeout> | undefined;
+// A local change is marked first and pushed a few seconds later, so a burst
+// of assignments becomes one commit. The mark is what counts: an MV3 worker
+// can be shut down before the timer fires, and the alarm then finishes the
+// job. The engine's own writes land here too; they merge to nothing new and
+// produce no commit.
+export async function onAssignmentsChanged(): Promise<void> {
+  if ((await getSyncMode()) !== 'github') return;
+  await markDirty();
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => { syncOnce().catch(() => {}); }, PUSH_DEBOUNCE_MS);
 }
 
 export async function hydrateMissingIcons(): Promise<number> {
@@ -124,9 +197,17 @@ export default defineBackground(() => {
     return true; // async response
   });
   browser.alarms.create('ubicon-refresh', { periodInMinutes: 720 });
-  browser.alarms.onAlarm.addListener(a => { if (a.name === 'ubicon-refresh') fetchIndex(true).catch(() => {}); });
-  browser.storage.onChanged.addListener((_changes, area) => {
-    if (area === 'sync') hydrateMissingIcons().catch(() => {});
+  browser.alarms.onAlarm.addListener(a => {
+    if (a.name === 'ubicon-refresh') fetchIndex(true).catch(() => {});
+    if (a.name === SYNC_ALARM) syncOnce().catch(() => {});
+  });
+  browser.storage.onChanged.addListener((changes, area) => {
+    // Assignments live in storage.sync in browser mode and under the single
+    // 'assignments' key of storage.local otherwise (see shared/storage.ts).
+    // Anything else in storage.local (icon blobs, the index, names) must not
+    // trigger a hydrate, or caching an icon would loop back into this.
+    if (area === 'sync' || (area === 'local' && 'assignments' in changes)) hydrateMissingIcons().catch(() => {});
+    if (area === 'local' && ('assignments' in changes || 'tombstones' in changes)) onAssignmentsChanged().catch(() => {});
   });
   browser.runtime.onInstalled.addListener(() => {
     ensureRegisteredOrigins().catch(() => {});
@@ -154,4 +235,11 @@ export default defineBackground(() => {
   });
   hydrateMissingIcons().catch(() => {});
   ensureRegisteredOrigins().catch(() => {});
+  // Pull on startup; re-create the alarm, which Chrome drops on an extension
+  // update just as it drops dynamic content scripts.
+  getSyncMode().then(mode => {
+    if (mode !== 'github') return;
+    scheduleSync(true).catch(() => {});
+    syncOnce().catch(() => {});
+  }).catch(() => {});
 });

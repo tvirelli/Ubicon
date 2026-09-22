@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>Ubicon</title>
@@ -11,11 +11,29 @@
       <h1>Ubicon</h1>
       <span id="db-status"></span>
     </header>
+    <aside id="hint" class="hint" aria-label="GitHub sync is on in another browser" hidden>
+      <p id="hint-text"></p>
+      <div class="hint-actions">
+        <button id="hint-enter" type="button" class="solid">Enter setup code</button>
+        <button id="hint-dismiss" type="button">Dismiss</button>
+      </div>
+    </aside>
+    <p id="view-only" class="view-only" role="note" hidden>This browser is connected with a view-only token.</p>
     <main id="list"><p class="empty">No devices assigned yet. Open a client's Change Icon dialog (click its photo) and press the Ubicon mark next to the dialog title.</p></main>
     <section id="consoles-section">
       <h2>Consoles</h2>
       <ul id="consoles"></ul>
       <button id="add-console" hidden></button>
+    </section>
+    <section id="sync-section">
+      <h2>GitHub sync</h2>
+      <div class="sync-row">
+        <span id="sync-text" role="status"></span>
+        <a id="sync-setup" href="#">Set up GitHub sync</a>
+        <button id="sync-now" type="button" hidden>Sync now</button>
+        <button id="sync-manage" type="button" title="Setup code, replace token, disconnect" hidden>Manage</button>
+      </div>
+      <a id="sync-expiry" class="sync-expiry" href="#" hidden></a>
     </section>
     <footer>
       <button id="refresh">Refresh database</button>

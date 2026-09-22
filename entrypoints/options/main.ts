@@ -1,14 +1,16 @@
 import { addConsoleOrigin, listConsoleOrigins, removeConsoleOrigin } from '../../shared/consoles';
+import { initSyncUi } from './sync';
 
 const $ = (id: string) => document.getElementById(id)!;
 
 async function renderList() {
   const ul = $('origins');
-  ul.innerHTML = '';
+  ul.replaceChildren();
   for (const origin of await listConsoleOrigins()) {
     const li = document.createElement('li');
     li.textContent = origin + ' ';
     const rm = document.createElement('button');
+    rm.className = 'btn small';
     rm.textContent = 'Remove';
     rm.addEventListener('click', async () => {
       await removeConsoleOrigin(origin);
@@ -40,3 +42,4 @@ $('add').addEventListener('submit', async e => {
 });
 
 renderList();
+initSyncUi();
