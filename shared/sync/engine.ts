@@ -75,11 +75,12 @@ const setState = (s: SyncState) => browser.storage.local.set({ [STATE_KEY]: s })
 export const markDirty = () => browser.storage.local.set({ [DIRTY_KEY]: Date.now() });
 
 const sameRepo = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
-// A repo besides the sync repo counts against the token if the token could
-// read something not already public, or write anything. A public repo the
-// token can only read is what anyone on the internet can do, so it is ignored.
+// Private repos besides the sync repo. The listing is already asked for
+// private repos only; the flag is checked again in case a server ignores the
+// query, since counting a public repo here would refuse every account that
+// owns one (see listReach).
 const othersIn = (reach: ReachEntry[], repo: string) =>
-  reach.filter(r => r.fullName && !sameRepo(r.fullName, repo) && (r.isPrivate || r.canPush)).length;
+  reach.filter(r => r.fullName && r.isPrivate && !sameRepo(r.fullName, repo)).length;
 
 const customIds = (m: Manifest): Set<string> => {
   const ids = new Set<string>();

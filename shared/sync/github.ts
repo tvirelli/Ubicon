@@ -109,22 +109,20 @@ export async function whoami(token: string): Promise<string> {
   return String(((await res.json()) as { login?: unknown }).login ?? '');
 }
 
-export interface ReachEntry { fullName: string; isPrivate: boolean; canPush: boolean; }
+export interface ReachEntry { fullName: string; isPrivate: boolean; }
 
-// The repos the token can see, with what it may do to each. GitHub lists the
-// user's public repos to every token, selected on them or not, so the names
-// alone cannot tell a token limited to one repo from one left on "All
-// repositories"; the per-repo permissions can. One page is enough: any second
-// repo that counts already fails the check.
+// The private repos the token can see. A fine-grained token limited to
+// selected repositories is shown only the private repos it was selected on,
+// so a second private repo here means the token was left on "All
+// repositories". Public repos are left out on purpose: GitHub lists them to
+// every token, and the per-repo permissions in the listing describe the
+// user's own rights, not the token's, so they say nothing about its reach.
+// One page is enough: any second repo already fails the check.
 export async function listReach(token: string): Promise<ReachEntry[]> {
-  const res = await request(token, '/user/repos?affiliation=owner&per_page=100');
+  const res = await request(token, '/user/repos?affiliation=owner&visibility=private&per_page=100');
   if (!res.ok) throw fail(res);
-  const rows = (await res.json()) as Array<{ full_name?: unknown; private?: unknown; permissions?: { push?: unknown; maintain?: unknown; admin?: unknown } }>;
-  return rows.map(r => ({
-    fullName: String(r.full_name ?? ''),
-    isPrivate: r.private === true,
-    canPush: r.permissions?.push === true || r.permissions?.maintain === true || r.permissions?.admin === true,
-  }));
+  const rows = (await res.json()) as Array<{ full_name?: unknown; private?: unknown }>;
+  return rows.map(r => ({ fullName: String(r.full_name ?? ''), isPrivate: r.private === true }));
 }
 
 export function createGitHub(token: string, repo: string) {

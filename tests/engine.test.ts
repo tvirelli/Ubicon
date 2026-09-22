@@ -18,7 +18,7 @@ const MAC2 = 'aa:bb:cc:dd:ee:ff';
 const ICON = 'data:image/png;base64,Q1VTVE9N';
 const db = (deviceId: string) => ({ kind: 'db', deviceId }) as const;
 // What a token sees for a private repo it was selected on.
-const mine = (fullName: string): ReachEntry => ({ fullName, isPrivate: true, canPush: true });
+const mine = (fullName: string): ReachEntry => ({ fullName, isPrivate: true });
 
 // An in-memory stand-in for the user's GitHub repo, with the one property
 // that matters: a write based on a stale version is refused.
@@ -126,22 +126,17 @@ test('a token that can reach any other repo is refused and nothing is stored', a
   expect(await readHint()).toBeNull();
 });
 
-test('public repos the token can only read do not count: GitHub lists them to every token', async () => {
+test('public repos never count, even if the listing includes them: GitHub shows them to every token', async () => {
   repo.reach = [
     mine(REPO),
-    { fullName: 'tony/Ubicon', isPrivate: false, canPush: false },
-    { fullName: 'tony/ubicon-sync-template', isPrivate: false, canPush: false },
+    { fullName: 'tony/Ubicon', isPrivate: false },
+    { fullName: 'tony/ubicon-sync-template', isPrivate: false },
   ];
   await expect(connect({ token: TOKEN }, deps)).resolves.toMatchObject({ repo: REPO });
 });
 
-test('a public repo the token can write to does count', async () => {
-  repo.reach = [mine(REPO), { fullName: 'tony/Ubicon', isPrivate: false, canPush: true }];
-  await expect(connect({ token: TOKEN }, deps)).rejects.toMatchObject({ reason: 'token-too-broad', others: 1 });
-});
-
-test('a private repo the token can only read still counts', async () => {
-  repo.reach = [mine(REPO), { fullName: 'tony/secrets', isPrivate: true, canPush: false }];
+test('any other private repo counts', async () => {
+  repo.reach = [mine(REPO), { fullName: 'tony/secrets', isPrivate: true }];
   await expect(connect({ token: TOKEN }, deps)).rejects.toMatchObject({ reason: 'token-too-broad', others: 1 });
 });
 

@@ -51,10 +51,10 @@ test('a token left on All repositories is refused with the count of other repos'
     const u = String(url);
     if (u.endsWith('/user')) return json(200, { login: 'tony' });
     if (u.includes('/user/repos')) return json(200, [
-      { full_name: 'tony/ubicon-sync', private: true, permissions: { push: true } },
-      { full_name: 'tony/a', private: true, permissions: { push: true } },
-      { full_name: 'tony/b', private: true, permissions: { push: true } },
-      { full_name: 'tony/public', private: false, permissions: { push: false } },
+      { full_name: 'tony/ubicon-sync', private: true },
+      { full_name: 'tony/a', private: true },
+      { full_name: 'tony/b', private: true },
+      { full_name: 'tony/public', private: false },
     ]);
     return json(200, {});
   }) as typeof fetch;
