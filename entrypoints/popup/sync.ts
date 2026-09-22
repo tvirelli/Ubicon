@@ -22,6 +22,9 @@ export async function initPopupSync(onStatus: (status: SyncStatus) => void): Pro
     text.dataset.tone = line.tone;
     $('sync-setup').hidden = s.connected;
     $('sync-now').hidden = !s.connected;
+    // The Options page holds everything else (setup code, Replace token,
+    // Disconnect) and nothing but this link leads there once connected.
+    $('sync-manage').hidden = !s.connected;
     $('view-only').hidden = !(s.connected && s.readOnly);
 
     const expiry = s.connected ? expiryWarning(s.tokenExpiresAt) : null;
@@ -43,6 +46,7 @@ export async function initPopupSync(onStatus: (status: SyncStatus) => void): Pro
   };
   $('sync-setup').addEventListener('click', openOptions);
   $('sync-expiry').addEventListener('click', openOptions);
+  $('sync-manage').addEventListener('click', openOptions);
 
   $('sync-now').addEventListener('click', async () => {
     const button = $('sync-now') as HTMLButtonElement;

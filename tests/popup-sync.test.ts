@@ -61,18 +61,22 @@ test('not connected: a "Set up GitHub sync" link that opens the Options page', a
   expect($('sync-setup').hidden).toBe(false);
   expect($('sync-setup').textContent).toBe('Set up GitHub sync');
   expect($('sync-now').hidden).toBe(true);
+  expect($('sync-manage').hidden).toBe(true);
   expect($('hint').hidden).toBe(true);
   expect($('view-only').hidden).toBe(true);
   $('sync-setup').click();
   expect(openOptionsPage).toHaveBeenCalledTimes(1);
 });
 
-test('connected: "Synced N minutes ago" and a Sync now button', async () => {
+test('connected: "Synced N minutes ago", a Sync now button, and a Manage link to the Options page', async () => {
   status = connected();
   await openPopup();
   expect($('sync-setup').hidden).toBe(true);
   expect($('sync-text').textContent).toBe('Synced 3 minutes ago');
   expect($('sync-now').hidden).toBe(false);
+  expect($('sync-manage').hidden).toBe(false);
+  $('sync-manage').click();
+  expect(openOptionsPage).toHaveBeenCalledTimes(1);
 
   status = connected({ lastSyncAt: Date.now() });
   $('sync-now').click();
