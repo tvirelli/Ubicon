@@ -3,7 +3,7 @@ import { fakeBrowser } from 'wxt/testing/fake-browser';
 import {
   SetupError, connect, disconnect, getCredentials, getStatus, markDirty, replaceToken, syncOnce, type SyncDeps,
 } from '../shared/sync/engine';
-import { GitHubError, type GitHubClient, type ManifestRead } from '../shared/sync/github';
+import { GitHubError, type GitHubClient, type ManifestRead, type ReachEntry } from '../shared/sync/github';
 import { parseManifest, serializeManifest } from '../shared/sync/manifest';
 import { readHint } from '../shared/sync/hint';
 import {
@@ -17,6 +17,8 @@ const MAC1 = 'd4:3d:39:80:fc:80';
 const MAC2 = 'aa:bb:cc:dd:ee:ff';
 const ICON = 'data:image/png;base64,Q1VTVE9N';
 const db = (deviceId: string) => ({ kind: 'db', deviceId }) as const;
+// What a token sees for a private repo it was selected on.
+const mine = (fullName: string): ReachEntry => ({ fullName, isPrivate: true, canPush: true });
 
 // An in-memory stand-in for the user's GitHub repo, with the one property
 // that matters: a write based on a stale version is refused.
@@ -27,7 +29,7 @@ class FakeRepo {
   log: string[] = [];
   writable = true;
   exists = true;
-  reach: string[] = [REPO];
+  reach: ReachEntry[] = [mine(REPO)];
   // Runs once, between a client's read and its write: another browser getting in first.
   beforeNextWrite: (() => void) | null = null;
   failNext: GitHubError | null = null;
@@ -113,7 +115,7 @@ test('a second browser pulls everything and keeps what only it had', async () =>
 });
 
 test('a token that can reach any other repo is refused and nothing is stored', async () => {
-  repo.reach = [REPO, 'tony/secret-project', 'tony/dotfiles'];
+  repo.reach = [mine(REPO), mine('tony/secret-project'), mine('tony/dotfiles')];
   await setAssignment(MAC1, db('a'));
   const err = await connect({ token: TOKEN }, deps).catch(e => e as SetupError);
   expect(err).toBeInstanceOf(SetupError);
@@ -124,8 +126,27 @@ test('a token that can reach any other repo is refused and nothing is stored', a
   expect(await readHint()).toBeNull();
 });
 
+test('public repos the token can only read do not count: GitHub lists them to every token', async () => {
+  repo.reach = [
+    mine(REPO),
+    { fullName: 'tony/Ubicon', isPrivate: false, canPush: false },
+    { fullName: 'tony/ubicon-sync-template', isPrivate: false, canPush: false },
+  ];
+  await expect(connect({ token: TOKEN }, deps)).resolves.toMatchObject({ repo: REPO });
+});
+
+test('a public repo the token can write to does count', async () => {
+  repo.reach = [mine(REPO), { fullName: 'tony/Ubicon', isPrivate: false, canPush: true }];
+  await expect(connect({ token: TOKEN }, deps)).rejects.toMatchObject({ reason: 'token-too-broad', others: 1 });
+});
+
+test('a private repo the token can only read still counts', async () => {
+  repo.reach = [mine(REPO), { fullName: 'tony/secrets', isPrivate: true, canPush: false }];
+  await expect(connect({ token: TOKEN }, deps)).rejects.toMatchObject({ reason: 'token-too-broad', others: 1 });
+});
+
 test('reach comparison ignores case, since GitHub names are case-insensitive', async () => {
-  repo.reach = ['Tony/Ubicon-Sync'];
+  repo.reach = [mine('Tony/Ubicon-Sync')];
   await expect(connect({ token: TOKEN }, deps)).resolves.toMatchObject({ repo: REPO });
 });
 
@@ -291,22 +312,22 @@ test('a token whose reach grows later pauses syncing, keeps the data, and resume
   const state = (await fakeBrowser.storage.local.get('sync:state'))['sync:state'] as { reachCheckedAt: number };
   await fakeBrowser.storage.local.set({ 'sync:state': { ...state, reachCheckedAt: Date.now() - 25 * 60 * 60 * 1000 } });
 
-  repo.reach = [REPO, 'tony/new-private-repo'];
+  repo.reach = [mine(REPO), mine('tony/new-private-repo')];
   expect(await syncOnce(deps)).toBe('paused');
   expect(await getStatus()).toMatchObject({ paused: 'reach', othersInReach: 1, connected: true });
   expect(await getAllAssignments()).toEqual({ [MAC1]: db('a') });
 
-  repo.reach = [REPO];
+  repo.reach = [mine(REPO)];
   expect(await syncOnce(deps)).not.toBe('paused');
   expect((await getStatus()).paused).toBeUndefined();
 });
 
 test('replaceToken vets the new token first and refuses a broad one without losing the old', async () => {
   await connect({ token: TOKEN }, deps);
-  repo.reach = [REPO, 'tony/other'];
+  repo.reach = [mine(REPO), mine('tony/other')];
   await expect(replaceToken('github_pat_NEW', deps)).rejects.toMatchObject({ reason: 'token-too-broad' });
   expect((await getCredentials())?.token).toBe(TOKEN);
-  repo.reach = [REPO];
+  repo.reach = [mine(REPO)];
   await replaceToken('github_pat_NEW', deps);
   expect((await getCredentials())?.token).toBe('github_pat_NEW');
 });

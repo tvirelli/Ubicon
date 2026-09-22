@@ -109,13 +109,22 @@ export async function whoami(token: string): Promise<string> {
   return String(((await res.json()) as { login?: unknown }).login ?? '');
 }
 
-// Full names of the repos the token can see. A token limited to selected
-// repos lists only those, which is how a token left on "All repositories" is
-// caught. One page is enough: any second repo already fails the check.
-export async function listReach(token: string): Promise<string[]> {
+export interface ReachEntry { fullName: string; isPrivate: boolean; canPush: boolean; }
+
+// The repos the token can see, with what it may do to each. GitHub lists the
+// user's public repos to every token, selected on them or not, so the names
+// alone cannot tell a token limited to one repo from one left on "All
+// repositories"; the per-repo permissions can. One page is enough: any second
+// repo that counts already fails the check.
+export async function listReach(token: string): Promise<ReachEntry[]> {
   const res = await request(token, '/user/repos?affiliation=owner&per_page=100');
   if (!res.ok) throw fail(res);
-  return ((await res.json()) as Array<{ full_name?: unknown }>).map(r => String(r.full_name ?? ''));
+  const rows = (await res.json()) as Array<{ full_name?: unknown; private?: unknown; permissions?: { push?: unknown; maintain?: unknown; admin?: unknown } }>;
+  return rows.map(r => ({
+    fullName: String(r.full_name ?? ''),
+    isPrivate: r.private === true,
+    canPush: r.permissions?.push === true || r.permissions?.maintain === true || r.permissions?.admin === true,
+  }));
 }
 
 export function createGitHub(token: string, repo: string) {

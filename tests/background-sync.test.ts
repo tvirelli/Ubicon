@@ -50,7 +50,12 @@ test('a token left on All repositories is refused with the count of other repos'
   global.fetch = vi.fn(async (url: string | URL | Request) => {
     const u = String(url);
     if (u.endsWith('/user')) return json(200, { login: 'tony' });
-    if (u.includes('/user/repos')) return json(200, [{ full_name: 'tony/ubicon-sync' }, { full_name: 'tony/a' }, { full_name: 'tony/b' }]);
+    if (u.includes('/user/repos')) return json(200, [
+      { full_name: 'tony/ubicon-sync', private: true, permissions: { push: true } },
+      { full_name: 'tony/a', private: true, permissions: { push: true } },
+      { full_name: 'tony/b', private: true, permissions: { push: true } },
+      { full_name: 'tony/public', private: false, permissions: { push: false } },
+    ]);
     return json(200, {});
   }) as typeof fetch;
   expect(await handleMessage({ type: 'sync-connect', token: TOKEN })).toMatchObject({ ok: false, reason: 'token-too-broad', others: 2 });

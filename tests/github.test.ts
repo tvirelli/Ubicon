@@ -37,9 +37,19 @@ test('every request is authenticated, versioned and bypasses the browser cache',
   expect(calls[0]?.init.cache).toBe('no-store');
 });
 
-test('listReach returns the full names of every repo the token can see', async () => {
-  queue.push(json(200, [{ full_name: 'tony/ubicon-sync' }, { full_name: 'tony/secret-project' }]));
-  expect(await listReach(TOKEN)).toEqual(['tony/ubicon-sync', 'tony/secret-project']);
+test('listReach returns each repo the token can see with its visibility and write access', async () => {
+  queue.push(json(200, [
+    { full_name: 'tony/ubicon-sync', private: true, permissions: { push: true, pull: true } },
+    { full_name: 'tony/public-thing', private: false, permissions: { push: false, pull: true } },
+    { full_name: 'tony/admin-thing', private: false, permissions: { admin: true } },
+    { full_name: 'tony/no-perms' },
+  ]));
+  expect(await listReach(TOKEN)).toEqual([
+    { fullName: 'tony/ubicon-sync', isPrivate: true, canPush: true },
+    { fullName: 'tony/public-thing', isPrivate: false, canPush: false },
+    { fullName: 'tony/admin-thing', isPrivate: false, canPush: true },
+    { fullName: 'tony/no-perms', isPrivate: false, canPush: false },
+  ]);
   expect(calls[0]?.url).toContain('/user/repos?affiliation=owner&per_page=100');
 });
 

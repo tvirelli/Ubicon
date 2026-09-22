@@ -5,7 +5,7 @@ import {
   readManifest, writeManifest, type SyncMode,
 } from '../storage';
 import { serialized } from '../write-queue';
-import { GitHubError, createGitHub, listReach, whoami, type GitHubClient } from './github';
+import { GitHubError, createGitHub, listReach, whoami, type GitHubClient, type ReachEntry } from './github';
 import { removeHint, writeHint } from './hint';
 import { emptyManifest, parseManifest, serializeManifest } from './manifest';
 import { merge } from './merge';
@@ -47,7 +47,7 @@ interface SyncState {
 export interface SyncDeps {
   makeClient: (token: string, repo: string) => GitHubClient;
   whoami: (token: string) => Promise<string>;
-  listReach: (token: string) => Promise<string[]>;
+  listReach: (token: string) => Promise<ReachEntry[]>;
   sleep: (ms: number) => Promise<void>;
   label: () => string;
 }
@@ -75,7 +75,11 @@ const setState = (s: SyncState) => browser.storage.local.set({ [STATE_KEY]: s })
 export const markDirty = () => browser.storage.local.set({ [DIRTY_KEY]: Date.now() });
 
 const sameRepo = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
-const othersIn = (reach: string[], repo: string) => reach.filter(r => r && !sameRepo(r, repo)).length;
+// A repo besides the sync repo counts against the token if the token could
+// read something not already public, or write anything. A public repo the
+// token can only read is what anyone on the internet can do, so it is ignored.
+const othersIn = (reach: ReachEntry[], repo: string) =>
+  reach.filter(r => r.fullName && !sameRepo(r.fullName, repo) && (r.isPrivate || r.canPush)).length;
 
 const customIds = (m: Manifest): Set<string> => {
   const ids = new Set<string>();
