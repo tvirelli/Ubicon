@@ -46,7 +46,7 @@ export async function initPopupSync(onStatus: (status: SyncStatus) => void): Pro
   };
   $('sync-setup').addEventListener('click', openOptions);
   $('sync-expiry').addEventListener('click', openOptions);
-  $('sync-manage').addEventListener('click', openOptions);
+  $('sync-manage').addEventListener('click', () => { void browser.runtime.openOptionsPage(); });
 
   $('sync-now').addEventListener('click', async () => {
     const button = $('sync-now') as HTMLButtonElement;
