@@ -366,6 +366,23 @@ test('success: the count, the repo link, and a setup code hidden until Show', as
   expect(writeText).toHaveBeenCalledWith('ubicon1.SECRETCODE');
   expect(card.querySelector('.copied')!.textContent).toBe('Copied');
 
+  // Download hands the user a text file holding the code and what it is for.
+  const urls: string[] = [];
+  const clicks: string[] = [];
+  const origCreate = URL.createObjectURL;
+  URL.createObjectURL = (b: Blob | MediaSource) => { urls.push(String((b as Blob).type)); return 'blob:code'; };
+  const origClick = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function () { clicks.push(this.download + ' ' + this.href); };
+  try {
+    card.querySelector<HTMLElement>('[data-role="download-code"]')!.click();
+  } finally {
+    URL.createObjectURL = origCreate;
+    HTMLAnchorElement.prototype.click = origClick;
+  }
+  expect(urls).toEqual(['text/plain']);
+  expect(clicks).toEqual(['ubicon-setup-code.txt blob:code']);
+  expect(card.querySelector('.copied')!.textContent).toBe('Saved as ubicon-setup-code.txt');
+
   $('success-done').click();
   expect($('wizard').hidden).toBe(true);
   expect($('page').hidden).toBe(false);

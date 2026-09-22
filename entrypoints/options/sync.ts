@@ -9,6 +9,7 @@ import type { ConnectResult, ConnectStep, SetupFailure, SyncStatus } from '../..
 import type { SyncHint } from '../../shared/sync/hint';
 import { requestGitHubAccess } from '../../shared/sync/permission';
 import { REPO_RE, decodeSetupCode, looksLikeToken } from '../../shared/sync/setup-code';
+import { SETUP_CODE_FILENAME, setupCodeFileText } from '../../shared/sync/ui-text';
 import {
   BAD_REPO_TEXT, CLASSIC_TOKEN_TEXT, NEW_REPO_URL, NEW_TOKEN_URL, NOT_A_SETUP_CODE_TEXT,
   PASTED_TOKEN_NOT_CODE_TEXT, PERMISSION_DENIED_TEXT, SECRET_TEXT, SIGNUP_URL, TOKENS_URL,
@@ -145,7 +146,7 @@ function renderFixCard(
 const MASK = '•'.repeat(24);
 
 // `code` lives in this closure and reaches the DOM only while revealed.
-function buildSetupCodeCard(code: string, opts: { revealed: boolean }): HTMLElement {
+function buildSetupCodeCard(code: string, repo: string, opts: { revealed: boolean }): HTMLElement {
   let revealed = opts.revealed;
   const card = el('div', 'code-card');
   card.append(
@@ -160,6 +161,9 @@ function buildSetupCodeCard(code: string, opts: { revealed: boolean }): HTMLElem
   const copy = el('button', 'btn small', 'Copy');
   copy.type = 'button';
   copy.dataset.role = 'copy-code';
+  const download = el('button', 'btn small', 'Download');
+  download.type = 'button';
+  download.dataset.role = 'download-code';
   const copied = el('span', 'copied');
   copied.setAttribute('role', 'status');
 
@@ -182,10 +186,21 @@ function buildSetupCodeCard(code: string, opts: { revealed: boolean }): HTMLElem
       },
     );
   });
+  download.addEventListener('click', () => {
+    // A text file the user can put somewhere safe, the way sites hand out
+    // two-factor backup codes. Same download mechanism as the popup's Export.
+    const blob = new Blob([setupCodeFileText(code, repo)], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = SETUP_CODE_FILENAME;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 0);
+    copied.textContent = 'Saved as ' + SETUP_CODE_FILENAME;
+  });
   paint();
 
   const actions = el('div', 'actions');
-  actions.append(show, copy, copied);
+  actions.append(show, copy, download, copied);
   card.append(box, actions, el('p', 'quiet', SECRET_TEXT));
   return card;
 }
@@ -491,7 +506,7 @@ export async function initSyncUi(): Promise<void> {
       // happen inside the click itself, with nothing awaited in between.
       void send({ type: 'sync-setup-code' }).then(reply => {
         if (reply.ok && reply.setupCode && screen === 'success') {
-          $('success-code').replaceChildren(buildSetupCodeCard(reply.setupCode, { revealed: false }));
+          $('success-code').replaceChildren(buildSetupCodeCard(reply.setupCode, reply.connected?.repo ?? status?.repo ?? '', { revealed: false }));
         }
       }, () => {});
     }
@@ -604,7 +619,7 @@ export async function initSyncUi(): Promise<void> {
     if (!reply.ok || !reply.setupCode) return;
     openPanel('show-code', 'code-panel');
     // This button is the Show button, so the code opens revealed.
-    $('code-panel').replaceChildren(buildSetupCodeCard(reply.setupCode, { revealed: true }));
+    $('code-panel').replaceChildren(buildSetupCodeCard(reply.setupCode, status?.repo ?? '', { revealed: true }));
     $('show-code').textContent = 'Hide setup code';
   });
 

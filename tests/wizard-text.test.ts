@@ -6,6 +6,7 @@ import {
   checklistLabels, clearWizardStep, disconnectedText, expiryWarning, fixCardFor, formatDate,
   hintText, iconsSyncedText, loadWizardStep, relativeTime, runningLine, saveWizardStep,
   shortStatusText, statusText,
+  setupCodeFileText,
 } from '../shared/sync/ui-text';
 
 beforeEach(() => fakeBrowser.reset());
@@ -148,4 +149,13 @@ test('the wizard step is saved, restored and cleared, and junk is ignored', asyn
   await saveWizardStep('code');
   await clearWizardStep();
   expect(await fakeBrowser.storage.local.get(null)).toEqual({});
+});
+
+test('the setup code file names the repo, carries the code on its own line, and says how to use and guard it', () => {
+  const text = setupCodeFileText('ubicon1.ABC', 'tony/ubicon-sync');
+  expect(text.split('\n')).toContain('ubicon1.ABC');
+  expect(text).toContain('tony/ubicon-sync');
+  expect(text).toContain('I have a setup');
+  expect(text).toContain('https://github.com/settings/personal-access-tokens');
+  expect(text).not.toMatch(/[\u2013\u2014]/);
 });

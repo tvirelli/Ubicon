@@ -45,6 +45,30 @@ export const BAD_REPO_TEXT = 'Type the repository as owner/name, for example you
 export const VIEW_ONLY_TEXT = 'This browser is connected with a view-only token.';
 export const SECRET_TEXT = 'This code contains your token, so treat it like a password.';
 
+export const SETUP_CODE_FILENAME = 'ubicon-setup-code.txt';
+
+// The text file behind the Download button on the setup code card. Written
+// for someone who finds the file months later, as with the backup codes a
+// site hands out when two-factor is turned on.
+export function setupCodeFileText(code: string, repo: string): string {
+  return [
+    'Ubicon setup code',
+    '',
+    'Connects a browser to the GitHub sync repository ' + repo + '.',
+    '',
+    code,
+    '',
+    'To use it: install Ubicon, open its options page, click "I have a setup',
+    'code", paste the line above and click Connect.',
+    '',
+    'Keep this file private. The code contains your GitHub access token: anyone',
+    'who has it can read and change the icons in that repository. If it leaks,',
+    'delete the token at https://github.com/settings/personal-access-tokens and',
+    'set up sync again with a new one.',
+    '',
+  ].join('\n');
+}
+
 export const hintText = (by: string) =>
   `You have GitHub sync turned on in ${by}. Connect this browser to share the same icons.`;
 
