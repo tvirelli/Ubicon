@@ -1,5 +1,5 @@
 import { beforeEach, expect, test, vi } from 'vitest';
-import { GitHubError, createGitHub, listReach, whoami } from '../shared/sync/github';
+import { GitHubError, createGitHub, listReach, probeReach, whoami } from '../shared/sync/github';
 
 const TOKEN = 'github_pat_SECRETSECRETSECRET';
 const REPO = 'tony/ubicon-sync';
@@ -37,18 +37,30 @@ test('every request is authenticated, versioned and bypasses the browser cache',
   expect(calls[0]?.init.cache).toBe('no-store');
 });
 
-test('listReach asks for private repos only and reports each with its visibility', async () => {
+test('listReach reports each repo the token can see with its visibility', async () => {
   queue.push(json(200, [
     { full_name: 'tony/ubicon-sync', private: true },
     { full_name: 'tony/secrets', private: true },
-    { full_name: 'tony/leaked-public', private: false },
+    { full_name: 'tony/public-thing', private: false },
   ]));
   expect(await listReach(TOKEN)).toEqual([
     { fullName: 'tony/ubicon-sync', isPrivate: true },
     { fullName: 'tony/secrets', isPrivate: true },
-    { fullName: 'tony/leaked-public', isPrivate: false },
+    { fullName: 'tony/public-thing', isPrivate: false },
   ]);
-  expect(calls[0]?.url).toContain('/user/repos?affiliation=owner&visibility=private&per_page=100');
+  expect(calls[0]?.url).toContain('/user/repos?affiliation=owner&per_page=100');
+});
+
+test('probeReach: 200 means granted, 403 or 404 means not, anything else is an error', async () => {
+  queue.push(json(200, []));
+  expect(await probeReach(TOKEN, 'tony/Ubicon')).toBe(true);
+  expect(calls[0]?.url).toBe('https://api.github.com/repos/tony/Ubicon/collaborators?per_page=1');
+  queue.push(json(403, { message: 'Resource not accessible by personal access token' }));
+  expect(await probeReach(TOKEN, 'tony/Ubicon')).toBe(false);
+  queue.push(json(404, { message: 'Not Found' }));
+  expect(await probeReach(TOKEN, 'tony/Ubicon')).toBe(false);
+  queue.push(json(401, { message: 'Bad credentials' }));
+  await expect(probeReach(TOKEN, 'tony/Ubicon')).rejects.toMatchObject({ kind: 'auth' });
 });
 
 test('readManifest decodes UTF-8 content and returns sha and etag', async () => {

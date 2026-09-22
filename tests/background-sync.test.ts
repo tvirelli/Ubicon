@@ -50,6 +50,7 @@ test('a token left on All repositories is refused with the count of other repos'
   global.fetch = vi.fn(async (url: string | URL | Request) => {
     const u = String(url);
     if (u.endsWith('/user')) return json(200, { login: 'tony' });
+    if (u.includes('/collaborators')) return json(403, { message: 'Resource not accessible by personal access token' });
     if (u.includes('/user/repos')) return json(200, [
       { full_name: 'tony/ubicon-sync', private: true },
       { full_name: 'tony/a', private: true },

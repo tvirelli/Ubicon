@@ -30,6 +30,8 @@ class FakeRepo {
   writable = true;
   exists = true;
   reach: ReachEntry[] = [mine(REPO)];
+  // Whether the token was granted on the account's public repos ("All repositories").
+  broad = false;
   // Runs once, between a client's read and its write: another browser getting in first.
   beforeNextWrite: (() => void) | null = null;
   failNext: GitHubError | null = null;
@@ -83,6 +85,7 @@ beforeEach(() => {
     makeClient: () => repo.client(),
     whoami: async () => 'tony',
     listReach: async () => repo.reach,
+    probeReach: async () => repo.broad,
     sleep: async () => {},
     label: () => 'Chrome on Windows',
   };
@@ -126,13 +129,30 @@ test('a token that can reach any other repo is refused and nothing is stored', a
   expect(await readHint()).toBeNull();
 });
 
-test('public repos never count, even if the listing includes them: GitHub shows them to every token', async () => {
+test('public repos the token was not granted on do not count: GitHub shows them to every token', async () => {
   repo.reach = [
     mine(REPO),
     { fullName: 'tony/Ubicon', isPrivate: false },
     { fullName: 'tony/ubicon-sync-template', isPrivate: false },
   ];
   await expect(connect({ token: TOKEN }, deps)).resolves.toMatchObject({ repo: REPO });
+});
+
+test('an account with only public repos and a token left on All repositories is refused', async () => {
+  repo.reach = [
+    mine(REPO),
+    { fullName: 'tony/Ubicon', isPrivate: false },
+    { fullName: 'tony/ubicon-sync-template', isPrivate: false },
+  ];
+  repo.broad = true;
+  await expect(connect({ token: TOKEN }, deps)).rejects.toMatchObject({ reason: 'token-too-broad', others: 2 });
+});
+
+test('the probe is skipped when there is no public repo to probe', async () => {
+  let probed = 0;
+  deps.probeReach = async () => { probed++; return true; };
+  await expect(connect({ token: TOKEN }, deps)).resolves.toMatchObject({ repo: REPO });
+  expect(probed).toBe(0);
 });
 
 test('any other private repo counts', async () => {

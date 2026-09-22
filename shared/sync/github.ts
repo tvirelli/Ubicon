@@ -111,18 +111,28 @@ export async function whoami(token: string): Promise<string> {
 
 export interface ReachEntry { fullName: string; isPrivate: boolean; }
 
-// The private repos the token can see. A fine-grained token limited to
-// selected repositories is shown only the private repos it was selected on,
-// so a second private repo here means the token was left on "All
-// repositories". Public repos are left out on purpose: GitHub lists them to
-// every token, and the per-repo permissions in the listing describe the
-// user's own rights, not the token's, so they say nothing about its reach.
-// One page is enough: any second repo already fails the check.
+// The repos the token can see. A fine-grained token limited to selected
+// repositories is shown only the private repos it was selected on, so a
+// second private repo here means the token was left on "All repositories".
+// Public repos are shown to every token, and the per-repo permissions in the
+// listing describe the user's own rights, not the token's, so for those the
+// listing says nothing about reach: that is what probeReach is for.
 export async function listReach(token: string): Promise<ReachEntry[]> {
-  const res = await request(token, '/user/repos?affiliation=owner&visibility=private&per_page=100');
+  const res = await request(token, '/user/repos?affiliation=owner&per_page=100');
   if (!res.ok) throw fail(res);
   const rows = (await res.json()) as Array<{ full_name?: unknown; private?: unknown }>;
   return rows.map(r => ({ fullName: String(r.full_name ?? ''), isPrivate: r.private === true }));
+}
+
+// Whether the token was granted on a given public repo. Reading a public
+// repo's contents works for any token, but its collaborators list needs a
+// real grant on that repo: a token limited to other repos gets 403, a token
+// left on "All repositories" gets 200 (verified against GitHub 2026-09-22).
+export async function probeReach(token: string, fullName: string): Promise<boolean> {
+  const res = await request(token, `/repos/${fullName}/collaborators?per_page=1`);
+  if (res.status === 403 || res.status === 404) return false;
+  if (!res.ok) throw fail(res);
+  return true;
 }
 
 export function createGitHub(token: string, repo: string) {

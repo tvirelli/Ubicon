@@ -5,7 +5,7 @@ import {
   readManifest, writeManifest, type SyncMode,
 } from '../storage';
 import { serialized } from '../write-queue';
-import { GitHubError, createGitHub, listReach, whoami, type GitHubClient, type ReachEntry } from './github';
+import { GitHubError, createGitHub, listReach, probeReach, whoami, type GitHubClient, type ReachEntry } from './github';
 import { removeHint, writeHint } from './hint';
 import { emptyManifest, parseManifest, serializeManifest } from './manifest';
 import { merge } from './merge';
@@ -48,6 +48,7 @@ export interface SyncDeps {
   makeClient: (token: string, repo: string) => GitHubClient;
   whoami: (token: string) => Promise<string>;
   listReach: (token: string) => Promise<ReachEntry[]>;
+  probeReach: (token: string, fullName: string) => Promise<boolean>;
   sleep: (ms: number) => Promise<void>;
   label: () => string;
 }
@@ -64,6 +65,7 @@ export const realDeps: SyncDeps = {
   makeClient: createGitHub,
   whoami,
   listReach,
+  probeReach,
   sleep: ms => new Promise(r => setTimeout(r, ms)),
   label: browserLabel,
 };
@@ -75,12 +77,18 @@ const setState = (s: SyncState) => browser.storage.local.set({ [STATE_KEY]: s })
 export const markDirty = () => browser.storage.local.set({ [DIRTY_KEY]: Date.now() });
 
 const sameRepo = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
-// Private repos besides the sync repo. The listing is already asked for
-// private repos only; the flag is checked again in case a server ignores the
-// query, since counting a public repo here would refuse every account that
-// owns one (see listReach).
-const othersIn = (reach: ReachEntry[], repo: string) =>
-  reach.filter(r => r.fullName && r.isPrivate && !sameRepo(r.fullName, repo)).length;
+// How many repos besides the sync repo the token reaches. Private ones show
+// up in the listing only when the token was granted on them, so each counts.
+// Public ones show up for every token, so one of them is probed: if the token
+// was granted on it, it was granted on all of them (see probeReach).
+async function othersInReach(token: string, repo: string, deps: SyncDeps): Promise<number> {
+  const others = (await deps.listReach(token)).filter(r => r.fullName && !sameRepo(r.fullName, repo));
+  const publics = others.filter(r => !r.isPrivate);
+  const privates = others.length - publics.length;
+  const sample = publics[0];
+  if (!sample || !(await deps.probeReach(token, sample.fullName))) return privates;
+  return privates + publics.length;
+}
 
 const customIds = (m: Manifest): Set<string> => {
   const ids = new Set<string>();
@@ -108,7 +116,7 @@ export async function syncOnce(deps: SyncDeps = realDeps): Promise<SyncOutcome> 
     // again once a day, and on every attempt while paused so that fixing the
     // token on GitHub lifts the pause by itself.
     if (state.paused || !state.reachCheckedAt || Date.now() - state.reachCheckedAt > REACH_CHECK_EVERY_MS) {
-      const others = othersIn(await deps.listReach(token), repo);
+      const others = await othersInReach(token, repo, deps);
       state.reachCheckedAt = Date.now();
       state.paused = others ? 'reach' : undefined;
       state.othersInReach = others || undefined;
@@ -295,7 +303,7 @@ async function vet(token: string, repoInput: string | undefined, deps: SyncDeps)
     await client.checkRepo();
   }
   await progress('reach');
-  const others = othersIn(await deps.listReach(token), repo);
+  const others = await othersInReach(token, repo, deps);
   if (others) throw new SetupError('token-too-broad', others);
   return repo;
 }
