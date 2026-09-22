@@ -20,11 +20,10 @@ export default defineConfig({
     icons: { 16: '/icon/16.png', 32: '/icon/32.png', 48: '/icon/48.png', 96: '/icon/96.png', 128: '/icon/128.png' },
     browser_specific_settings:
       // 140.0 desktop / 142.0 Android: the first Firefox versions that
-      // understand gecko.data_collection_permissions. AMO warns when
-      // strict_min_version predates a manifest key, so the minimum follows
-      // that key. It also covers the older floor of 128.0, the first version
-      // with content-script world: 'MAIN' (used by the React props bridge,
-      // entrypoints/bridge.content.ts).
+      // understand gecko.data_collection_permissions, declared below, so the
+      // minimum version follows that key. It also covers the older floor of
+      // 128.0, the first version with content-script world: 'MAIN' (used by
+      // the React props bridge, entrypoints/bridge.content.ts).
       //
       // data_collection_permissions is declared here on purpose: WXT does
       // not emit it, it only warns when it is missing. required: ['none']

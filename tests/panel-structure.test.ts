@@ -6,9 +6,8 @@ import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { ensureHeaderBadge, ensureModalButton, openAssignPanel } from '../content/panel';
 import type { DeviceRecord } from '../shared/types';
 
-// The panel used to be built from HTML template strings. Firefox's add-on
-// linter flags every innerHTML assignment, so the nodes are now created one
-// by one. These tests pin the resulting DOM to the markup those templates
+// The panel used to be built from HTML template strings and is now created
+// node by node, so no markup is ever assigned as a string. These tests pin the resulting DOM to the markup those templates
 // produced: same elements, same attributes, same text, same order. The CSS
 // and the rest of panel.ts select on exactly that structure.
 
@@ -199,7 +198,7 @@ test('header badge draws the 16px Ubicon mark as real SVG nodes', () => {
   expectMark(roots[0]!, '16');
 });
 
-test('panel.ts assigns no HTML strings, so the Firefox add-on linter has nothing to flag', () => {
+test('panel.ts never assigns markup as a string', () => {
   const source = readFileSync(resolve(process.cwd(), 'content/panel.ts'), 'utf8');
   // Assignments and calls only: comments may still name these APIs.
   expect(source).not.toMatch(/\.(innerHTML|outerHTML)\s*\+?=(?!=)|\.insertAdjacentHTML\s*\(/);

@@ -6,9 +6,8 @@ import { currentPanelMac } from './state';
 const send = (msg: UbiconMsg) => browser.runtime.sendMessage(msg) as Promise<UbiconReply>;
 const isDark = () => !!document.querySelector('[class*="-dark__"]');
 
-// Everything in this file is built node by node, never from an HTML string:
-// Firefox's add-on linter flags every innerHTML assignment, static or not.
-// el() keeps that readable. Attributes are given the way the markup would
+// Everything in this file is built node by node, never from an HTML string,
+// so no markup is ever assigned through innerHTML. el() keeps that readable. Attributes are given the way the markup would
 // spell them ('class', 'data-tab', '' for a boolean attribute); children are
 // nodes, or strings that become text.
 type Attrs = Record<string, string>;
