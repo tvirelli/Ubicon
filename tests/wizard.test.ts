@@ -461,3 +461,13 @@ test('the token field is a password field with a Show toggle, and nothing autoco
   toggle.click();
   expect(input.type).toBe('password');
 });
+
+test('the fix card names the repo the reply says was tried, not the default', async () => {
+  onConnect = () => ({ ok: false, error: 'repo-not-found', reason: 'repo-not-found', repo: 'tony/home-icons' });
+  await openStep3();
+  type($('token') as HTMLInputElement, TOKEN);
+  $('connect').click();
+  await flush();
+  const card = $('connect-fix').querySelector('.fix')!;
+  expect(card.textContent).toContain('cannot see home-icons');
+});

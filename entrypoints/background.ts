@@ -103,7 +103,7 @@ export async function handleMessage(msg: UbiconMsg): Promise<UbiconReply> {
         return { ok: true };
     }
   } catch (e) {
-    if (e instanceof SetupError) return { ok: false, error: e.reason, reason: e.reason, others: e.others };
+    if (e instanceof SetupError) return { ok: false, error: e.reason, reason: e.reason, others: e.others, repo: e.repo };
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }

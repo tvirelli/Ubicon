@@ -89,3 +89,13 @@ test('a view-only flag left over from an old connection does not block a browser
   await fakeBrowser.storage.local.set({ 'sync:state': { readOnly: true } });
   expect(await handleMessage({ type: 'unassign', mac: 'd4:3d:39:80:fc:80' })).toEqual({ ok: true });
 });
+
+test('a repo-not-found reply names the repo that was tried', async () => {
+  global.fetch = vi.fn(async (url: string | URL | Request) => {
+    const u = String(url);
+    if (u.endsWith('/user')) return json(200, { login: 'tony' });
+    if (u.includes('/repos/')) return json(404, { message: 'Not Found' });
+    return json(200, {});
+  }) as typeof fetch;
+  expect(await handleMessage({ type: 'sync-connect', token: TOKEN })).toMatchObject({ ok: false, reason: 'repo-not-found', repo: 'tony/ubicon-sync' });
+});

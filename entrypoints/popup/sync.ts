@@ -72,6 +72,11 @@ export async function initPopupSync(onStatus: (status: SyncStatus) => void): Pro
     await send({ type: 'sync-dismiss-hint' });
   });
 
+  browser.storage.onChanged.addListener((changes, area) => {
+    // The heads-up marker arriving while the popup is open.
+    if (area === 'sync' && 'sync:hint' in changes) send({ type: 'sync-status' }).then(paint).catch(() => {});
+  });
+
   try {
     paint(await send({ type: 'sync-status' }));
   } catch {

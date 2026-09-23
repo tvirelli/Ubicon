@@ -263,7 +263,9 @@ export type SetupFailure =
   | 'network' | 'rate-limit' | 'bad-remote' | 'other';
 
 export class SetupError extends Error {
-  constructor(public readonly reason: SetupFailure, public readonly others?: number) {
+  // `repo` is the repository the failed step was about, when one was known
+  // by then, so the fix card can name it instead of assuming the default.
+  constructor(public readonly reason: SetupFailure, public readonly others?: number, public repo?: string) {
     super(reason);
     this.name = 'SetupError';
   }
@@ -294,17 +296,23 @@ async function vet(token: string, repoInput: string | undefined, deps: SyncDeps)
   const repo = repoInput ?? `${login}/${DEFAULT_REPO_NAME}`;
   const client = deps.makeClient(token, repo);
   try {
-    await client.checkRepo();
+    try {
+      await client.checkRepo();
+    } catch (e) {
+      if (!(e instanceof GitHubError) || e.kind !== 'not-found') throw e;
+      // GitHub builds a repo made from a template in the background; a user
+      // who was quick can get here first. One retry covers it.
+      await deps.sleep(3000);
+      await client.checkRepo();
+    }
+    await progress('reach');
+    const others = await othersInReach(token, repo, deps);
+    if (others) throw new SetupError('token-too-broad', others);
   } catch (e) {
-    if (!(e instanceof GitHubError) || e.kind !== 'not-found') throw e;
-    // GitHub builds a repo made from a template in the background; a user
-    // who was quick can get here first. One retry covers it.
-    await deps.sleep(3000);
-    await client.checkRepo();
+    const err = asSetupError(e);
+    err.repo = repo;
+    throw err;
   }
-  await progress('reach');
-  const others = await othersInReach(token, repo, deps);
-  if (others) throw new SetupError('token-too-broad', others);
   return repo;
 }
 

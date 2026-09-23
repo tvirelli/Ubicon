@@ -370,7 +370,7 @@ export async function initSyncUi(): Promise<void> {
       // 'view-only' is the worker's answer to an icon change on a view-only
       // browser; it cannot come back from a connect, so it counts as "other".
       const reason: SetupFailure = !reply.reason || reply.reason === 'view-only' ? 'other' : reply.reason;
-      const card = fixCardFor(reason, { others: reply.others, repo: input.repo ?? status?.repo, context: form.context });
+      const card = fixCardFor(reason, { others: reply.others, repo: reply.repo ?? input.repo ?? status?.repo, context: form.context });
       form.checks.fail(card.line);
       if (card.askRepo) $('repo-field').hidden = false;
       renderFixCard(form.fix, card, { goto, retryLabel: form.retryLabel, onRetry: () => submit(form) });
@@ -661,6 +661,9 @@ export async function initSyncUi(): Promise<void> {
   $('gone-done').addEventListener('click', () => { pageState = 'off'; void refresh(); });
 
   browser.storage.onChanged.addListener((changes, area) => {
+    // The heads-up marker rides in through the browser vendor's sync; when
+    // it lands while this page is open, the notice appears without a reload.
+    if (area === 'sync' && 'sync:hint' in changes) { void refresh(); return; }
     if (area !== 'local') return;
     if ('sync:state' in changes || 'sync:mode' in changes || 'sync:dirty' in changes) void refresh();
     // The popup's "Enter setup code" button writes the step and opens this

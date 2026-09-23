@@ -383,3 +383,9 @@ test('local manifest after a merge matches the repo exactly', async () => {
   await connect({ token: TOKEN }, deps);
   expect(serializeManifest(await readManifest())).toBe(repo.body);
 });
+
+test('a repo the token cannot see is named in the failure, so the fix card can show which one was tried', async () => {
+  repo.exists = false;
+  await expect(connect({ token: TOKEN }, deps)).rejects.toMatchObject({ reason: 'repo-not-found', repo: expect.stringMatching(/\/ubicon-sync$/) });
+  await expect(connect({ token: TOKEN, repo: 'tony/home-icons' }, deps)).rejects.toMatchObject({ reason: 'repo-not-found', repo: 'tony/home-icons' });
+});

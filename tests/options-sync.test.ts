@@ -309,3 +309,15 @@ test('the popup\'s "Enter setup code" reaches an Options page that is already op
   expect($('wizard').hidden).toBe(false);
   expect(document.querySelector<HTMLElement>('.screen:not([hidden])')!.dataset.screen).toBe('code');
 });
+
+test('a hint that arrives while the page is open shows the notice without a reload', async () => {
+  status = disconnected;
+  hint = null;
+  await load();
+  expect($('hint').hidden).toBe(true);
+  hint = { v: 1, repo: 'tony/ubicon-sync', at: 1790000000000, by: 'Edge on Windows' };
+  await fakeBrowser.storage.sync.set({ 'sync:hint': hint });
+  await flush();
+  expect($('hint').hidden).toBe(false);
+  expect($('hint-text').textContent).toContain('Edge on Windows');
+});

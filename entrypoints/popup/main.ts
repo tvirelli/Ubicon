@@ -252,5 +252,19 @@ initPopupSync(status => {
   renderList();
 });
 
+// A background sync (or another window) can change assignments and cached
+// icons while the popup is open; redraw the list once the burst settles.
+// Assignments live in storage.sync in browser mode and under 'assignments'
+// in storage.local otherwise (shared/storage.ts); icons cache as 'icon:*'.
+let redrawTimer: ReturnType<typeof setTimeout> | undefined;
+browser.storage.onChanged.addListener((changes, area) => {
+  const relevant = area === 'sync'
+    ? Object.keys(changes).some(k => k !== 'sync:hint')
+    : Object.keys(changes).some(k => k === 'assignments' || k === 'tombstones' || k.startsWith('icon:'));
+  if (!relevant) return;
+  clearTimeout(redrawTimer);
+  redrawTimer = setTimeout(() => { renderList(); renderStatus(); }, 200);
+});
+
 // The layout-change notice, if the content script has stored one.
 void initLayoutNotice({ aside: 'layout-warning', issue: 'layout-issue', mail: 'layout-mail', dismiss: 'layout-dismiss' });
