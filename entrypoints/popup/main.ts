@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 import { exportAll, getAllAssignments, getCachedIcon, getIndexCache, iconKey } from '../../shared/storage';
 import { addConsoleOrigin, listConsoleOrigins, removeConsoleOrigin } from '../../shared/consoles';
+import { classifyConsoleUrl, offerText } from '../../shared/console-detect';
 import type { UbiconMsg, UbiconReply } from '../../shared/messages';
 import { VIEW_ONLY_TEXT } from '../../shared/sync/ui-text';
 import { initPopupSync } from './sync';
@@ -147,46 +148,54 @@ async function renderConsoles() {
   }
 }
 
-// Offers to add the active tab's console, if it looks like one worth
-// adding: an http(s) origin, not the manifest-declared unifi.ui.com, and
-// not already granted.
-async function setupAddConsoleButton() {
-  const btn = $('add-console') as HTMLButtonElement;
+// The console offer: when the popup opens on a UniFi console Ubicon is not
+// yet enabled on, one click grants that origin. shared/console-detect.ts
+// decides what counts as a console, so ordinary websites never see this.
+// This tab's address is readable here because the click on the toolbar icon
+// grants activeTab for it.
+const OFFER_DISMISSED_KEY = 'consoleOfferDismissed';
+
+async function setupConsoleOffer() {
+  const aside = $('console-offer');
+  const text = $('console-offer-text');
+  const onBtn = $('console-offer-on') as HTMLButtonElement;
+  const laterBtn = $('console-offer-later') as HTMLButtonElement;
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.url) return;
+  const guess = classifyConsoleUrl(tab?.url);
+  if (guess.kind === 'no') return;
+  if ((await listConsoleOrigins()).includes(guess.origin)) return;
+  const dismissed = ((await browser.storage.local.get(OFFER_DISMISSED_KEY))[OFFER_DISMISSED_KEY] as string[] | undefined) ?? [];
+  if (dismissed.includes(guess.origin)) return;
 
-  let origin: string;
-  try {
-    const url = new URL(tab.url);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
-    origin = url.origin;
-  } catch {
-    return;
-  }
-  if (origin === 'https://unifi.ui.com') return;
-  if ((await listConsoleOrigins()).includes(origin)) return;
+  text.textContent = offerText(guess);
+  aside.hidden = false;
 
-  btn.textContent = `Add this console (${origin})`;
-  btn.hidden = false;
-  btn.addEventListener('click', async () => {
-    // Called directly here (this click IS the user gesture); see
-    // shared/consoles.ts's addConsoleOrigin for why that matters.
+  onBtn.addEventListener('click', async () => {
+    // addConsoleOrigin must be the first await on this click: its
+    // permissions.request has to run inside the user gesture (Firefox).
     let result: Awaited<ReturnType<typeof addConsoleOrigin>>;
     try {
-      result = await addConsoleOrigin(tab.url);
+      result = await addConsoleOrigin(tab?.url);
     } catch (err) {
-      // A rejected permissions.request (e.g. Firefox's user-input rule)
-      // used to vanish here, leaving the button apparently dead.
-      $('db-status').textContent = err instanceof Error ? err.message : 'could not add console';
+      text.textContent = err instanceof Error ? err.message : 'Could not turn on Ubicon here.';
       return;
     }
-    if (result === 'added') {
-      btn.hidden = true;
+    if (result === 'added' || result === 'already') {
+      onBtn.hidden = true;
+      laterBtn.hidden = true;
+      text.textContent = `Ubicon is on for ${guess.host}. The page is reloading.`;
       renderConsoles();
-      if (tab.id != null) browser.tabs.reload(tab.id).catch(() => {});
+      if (tab?.id != null) browser.tabs.reload(tab.id).catch(() => {});
     } else if (result === 'denied') {
-      $('db-status').textContent = 'permission declined';
+      text.textContent = `Permission declined. Ubicon stays off for ${guess.host}; open this popup again to try once more.`;
+    } else {
+      text.textContent = 'That address cannot be used as a console.';
     }
+  });
+
+  laterBtn.addEventListener('click', async () => {
+    aside.hidden = true;
+    await browser.storage.local.set({ [OFFER_DISMISSED_KEY]: [...dismissed, guess.origin] });
   });
 }
 
@@ -232,7 +241,7 @@ $('import-file').addEventListener('change', async e => {
 renderStatus();
 renderList();
 renderConsoles();
-setupAddConsoleButton();
+setupConsoleOffer();
 initPopupSync(status => {
   const locked = status.connected && status.readOnly;
   const importBtn = $('import') as HTMLButtonElement;

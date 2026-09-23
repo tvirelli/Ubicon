@@ -3,7 +3,7 @@
   :root { --fg: #e8eaf0; --muted: #9aa1b4; --line: #333949; --bg: #1e222b; }
 }
 /* Guards the `hidden` attribute against any more-specific display rule
-   (e.g. #add-console's `display: block`) silently overriding it; without
+   (e.g. a section's own `display: block`) silently overriding it; without
    this, a "hidden" element with its own display rule still renders as an
    empty, borderless-looking-but-not-actually sliver. */
 [hidden] { display: none !important; }
@@ -31,8 +31,6 @@ main { max-height: 360px; overflow: auto; padding: 6px 8px; }
 .console-row .origin { font-size: 11.5px; color: var(--muted); font-family: ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .console-row button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 12px; padding: 0; }
 .console-row button:hover { color: #c0392b; }
-#add-console { display: block; width: 100%; margin-top: 6px; font-size: 11.5px; border: 1px solid var(--accent); background: none; color: var(--accent); border-radius: 6px; padding: 6px 9px; cursor: pointer; }
-#add-console:hover { background: rgba(91, 63, 209, .08); }
 footer { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--line); align-items: center; }
 footer button { font-size: 11.5px; border: 1px solid var(--line); background: none; color: var(--fg); border-radius: 6px; padding: 5px 9px; cursor: pointer; }
 footer button:hover { border-color: var(--accent); color: var(--accent); }

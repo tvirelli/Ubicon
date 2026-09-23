@@ -196,7 +196,7 @@ merges by timestamp and may undo your edit.
 
 Tested on UniFi Network 10.6.106. Ubicon reads the page rather than any UniFi API, so a Network update that changes the page can affect it; when that happens the extension says so and offers a one-click report.
 
-Ubicon works on `unifi.ui.com` out of the box. To use it with a console on your own network, add its address under Local UniFi controllers in Settings.
+Ubicon works on `unifi.ui.com` out of the box. For a console on your own network, open it in the browser, click the Ubicon toolbar icon, and accept the offer to turn Ubicon on there. One click grants that one address. You can also add an address by hand under Local UniFi controllers in Settings.
 
 <br>
 

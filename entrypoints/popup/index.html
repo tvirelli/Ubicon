@@ -18,6 +18,13 @@
         <button id="hint-dismiss" type="button">Dismiss</button>
       </div>
     </aside>
+    <aside id="console-offer" class="hint" role="status" aria-label="Turn on Ubicon for this console" hidden>
+      <p id="console-offer-text"></p>
+      <div class="hint-actions">
+        <button id="console-offer-on" type="button" class="solid">Turn on Ubicon here</button>
+        <button id="console-offer-later" type="button">Not now</button>
+      </div>
+    </aside>
     <aside id="layout-warning" class="hint warn" role="status" aria-label="UniFi layout changed" hidden>
       <p>UniFi's layout changed. Ubicon may not work until an update. Reporting it takes one click; the report names the page parts that changed and your browser, nothing about your devices or network.</p>
       <div class="hint-actions">
@@ -31,7 +38,6 @@
     <section id="consoles-section">
       <h2>Consoles</h2>
       <ul id="consoles"></ul>
-      <button id="add-console" hidden></button>
     </section>
     <section id="sync-section">
       <h2>GitHub sync</h2>
