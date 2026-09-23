@@ -11,6 +11,7 @@ export interface ReportInput {
   hooks?: string[];
   unifiVersion?: string;
   shell?: string;
+  profile?: string;
   console?: 'cloud' | 'local';
   path?: string;
   browser: string;
@@ -42,6 +43,7 @@ export function buildReport(input: ReportInput): Report {
     lines.push(`Hooks that no longer match: ${input.hooks!.join(', ')}`);
     lines.push(`UniFi Network version: ${input.unifiVersion ?? 'unknown'}`);
     lines.push(`Shell: ${input.shell ?? 'unknown'}`);
+    lines.push(`Selector profile: ${input.profile ?? 'unknown'}`);
     lines.push(`Console: ${input.console === 'local' ? 'local (self-hosted)' : 'cloud (unifi.ui.com)'}`);
     lines.push(`Page: ${input.path ?? 'unknown'}`);
   } else {

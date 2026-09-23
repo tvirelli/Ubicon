@@ -1,3 +1,4 @@
+import { getSelectors, type SelectorHooks } from './selectors';
 // Notices when UniFi's page no longer matches the hooks Ubicon paints
 // through, so the user can be told instead of seeing icons silently vanish.
 //
@@ -16,9 +17,8 @@ export interface HookCheck {
   broken: HookName[];
 }
 
-const ICON_IMG = 'img[src*="fingerprint/"], img[src*="/clients/photos/"], img[data-ubicon]';
-
-export function checkHooks(root: ParentNode): HookCheck {
+export function checkHooks(root: ParentNode, S: SelectorHooks = getSelectors()): HookCheck {
+  const ICON_IMG = S.iconImage;
   const present: HookName[] = [];
   const broken: HookName[] = [];
   const note = (name: HookName, ok: boolean) => { present.push(name); if (!ok) broken.push(name); };
@@ -26,7 +26,7 @@ export function checkHooks(root: ParentNode): HookCheck {
   // content/panel.ts ensureHeaderBadge: the logo SVG that is not a link.
   const header = root.querySelector('header');
   if (header) {
-    const logo = [...header.querySelectorAll('svg[class*="Logo-module_logo__"]')].find(s => !s.closest('a'));
+    const logo = [...root.querySelectorAll(S.headerLogo)].find(s => !s.closest('a'));
     note('header', !!logo);
   }
 
@@ -34,7 +34,7 @@ export function checkHooks(root: ParentNode): HookCheck {
   // client-name cell. Other tables (devices, for one) also key rows by
   // data-row-id, so rows alone prove nothing. Once the column is there, at
   // least one cell must hold the icon image Ubicon replaces.
-  const nameCells = root.querySelectorAll('tr[data-row-id] td[data-column-id="clientName"]');
+  const nameCells = root.querySelectorAll(`${S.clientRow} ${S.clientNameCell}`);
   if (nameCells.length) {
     let withIcon = 0;
     for (const cell of nameCells) if (cell.querySelector(ICON_IMG)) withIcon++;
@@ -45,16 +45,16 @@ export function checkHooks(root: ParentNode): HookCheck {
   // clients, and only a client's panel carries an icon image. A panel with
   // one is a working client panel; a panel without one is simply not a
   // client panel, so it is never reported as broken.
-  const panel = root.querySelector('.PROPERTY_PANEL_CLASSNAME');
+  const panel = root.querySelector(S.propertyPanel);
   if (panel?.querySelector(ICON_IMG)) note('client-panel', true);
 
   // content/panel.ts ensureModalButton: the Change Icon dialog, known by its
   // text, needs a title element in its header for the Ubicon mark to sit
   // in. Other dialogs may carry fingerprint images too (the dashboard's
   // console picture is one), so the image alone does not identify it.
-  for (const dialog of root.querySelectorAll('[role="dialog"][class*="modal__"]')) {
+  for (const dialog of root.querySelectorAll(S.modalDialog)) {
     if (!/\bChange Icon\b/.test(dialog.textContent ?? '')) continue;
-    const title = dialog.querySelector(':scope > [class*="header__"] [class*="title__"]');
+    const title = dialog.querySelector(`${S.modalHeader} ${S.modalTitle}`);
     note('change-icon-dialog', !!title);
     break;
   }
@@ -87,10 +87,10 @@ export function readUnifiVersion(root: ParentNode): string {
 // Site Manager 5.2.23 and UniFi OS 5.1.33.
 export function readShellVersion(root: ParentNode): string {
   const sm = root.querySelector('a[href*="/releases/r/site-manager/"]');
-  const m1 = /Site Manager\s+(\d+(?:\.\d+)+)/.exec((sm?.textContent ?? '').replace(/ /g, ' '));
+  const m1 = /Site Manager\s+(\d+(?:\.\d+)+)/.exec((sm?.textContent ?? '').replace(/\u00a0/g, ' '));
   if (m1?.[1]) return `Site Manager ${m1[1]}`;
   const os = root.querySelector('[data-testid="dashboard-unifi-os-version"]');
-  const m2 = /UniFi OS\s+(\d+(?:\.\d+)+)/.exec((os?.textContent ?? '').replace(/ /g, ' '));
+  const m2 = /UniFi OS\s+(\d+(?:\.\d+)+)/.exec((os?.textContent ?? '').replace(/\u00a0/g, ' '));
   if (m2?.[1]) return `UniFi OS ${m2[1]}`;
   return 'unknown';
 }

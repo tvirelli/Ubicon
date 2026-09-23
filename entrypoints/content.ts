@@ -2,6 +2,7 @@ import { browser } from 'wxt/browser';
 import { loadOverlayMap, hydrateNames, mergeNames, paintAll, setLastClickedMac } from '../content/state';
 import { ensureModalButton, ensureHeaderBadge, setHeaderBadgeState, setLayoutBreak } from '../content/panel';
 import { checkHooks, LayoutMonitor, readShellVersion, readUnifiVersion } from '../content/layout-check';
+import { activateProfile, activeProfileName, getSelectors, isNetworkPage } from '../content/selectors';
 import { clearBreak, loadBreak, saveBreak, recallShellVersion, recallUnifiVersion, rememberShellVersion, rememberUnifiVersion } from '../shared/layout-state';
 
 export default defineContentScript({
@@ -14,7 +15,6 @@ export default defineContentScript({
     // Selects the same icon-shaped <img>s sweepAllIcons treats as candidates
     // (content/state.ts): used only to fingerprint the current candidate
     // set, not to paint anything here.
-    const CANDIDATE_SELECTOR = 'img[src*="fingerprint/"], img[src*="/clients/photos/"], img[data-ubicon]';
 
     // Cheap signal for "did the set of icons worth resolving actually
     // change since the last repaint": the count plus each candidate's src,
@@ -22,7 +22,7 @@ export default defineContentScript({
     // without hashing: collisions would only cost a skipped resolve, never
     // a wrong paint, since paintAll above already ran against fresh DOM.
     function candidateFingerprint(): string {
-      const imgs = document.querySelectorAll<HTMLImageElement>(CANDIDATE_SELECTOR);
+      const imgs = document.querySelectorAll<HTMLImageElement>(getSelectors().iconImage);
       let fp = imgs.length + '|';
       for (const img of imgs) fp += img.src + ';';
       return fp;
@@ -39,12 +39,22 @@ export default defineContentScript({
     const consoleKind = location.hostname === 'unifi.ui.com' ? 'cloud' as const : 'local' as const;
     let unifiVersion = 'unknown';
     let shell = 'unknown';
-    void recallUnifiVersion(location.origin).then(v => { if (unifiVersion === 'unknown') unifiVersion = v; });
+    // Which selector profile (content/selectors.ts) this page gets: by the
+    // remembered Network version when there is one, by feature detection
+    // until then. Re-chosen whenever the version becomes known.
+    activateProfile(document, unifiVersion);
+    void recallUnifiVersion(location.origin).then(v => {
+      if (unifiVersion === 'unknown' && v !== 'unknown') { unifiVersion = v; activateProfile(document, v); }
+    });
     void recallShellVersion(location.origin).then(v => { if (shell === 'unknown') shell = v; });
     const watchLayout = () => {
+      // Only the Network application has anything for Ubicon to paint or to
+      // check; unifi.ui.com also serves the console picker and other apps.
+      if (!isNetworkPage(location.pathname)) return;
       const seenVersion = readUnifiVersion(document);
       if (seenVersion !== 'unknown' && seenVersion !== unifiVersion) {
         unifiVersion = seenVersion;
+        activateProfile(document, seenVersion);
         void rememberUnifiVersion(location.origin, seenVersion);
       }
       const seenShell = readShellVersion(document);
@@ -56,9 +66,11 @@ export default defineContentScript({
       const seen = monitor.observe(check, Date.now());
       if (seen) {
         const brk = {
-          signature: seen.signature, hooks: seen.hooks, unifiVersion, shell,
+          signature: seen.signature, hooks: seen.hooks, unifiVersion, shell, profile: activeProfileName(),
           console: consoleKind, path: location.pathname, firstSeen: seen.at, lastSeen: seen.at,
         };
+        // One line for anyone looking in DevTools: what failed, where, on what.
+        console.info('[Ubicon] layout change detected', { hooks: seen.hooks, page: location.pathname, network: unifiVersion, shell, profile: brk.profile });
         setLayoutBreak(brk);
         setHeaderBadgeState('warn');
         void saveBreak(brk);
@@ -96,7 +108,7 @@ export default defineContentScript({
     };
 
     document.addEventListener('click', e => {
-      const row = (e.target as Element).closest?.('tr[data-row-id]');
+      const row = (e.target as Element).closest?.(getSelectors().clientRow);
       if (row) setLastClickedMac(row.getAttribute('data-row-id')!);
     }, true);
 

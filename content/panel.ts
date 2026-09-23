@@ -1,3 +1,4 @@
+import { getSelectors } from './selectors';
 import { browser } from 'wxt/browser';
 import type { UbiconMsg, UbiconReply } from '../shared/messages';
 import type { DeviceRecord } from '../shared/types';
@@ -6,7 +7,7 @@ import type { LayoutBreak } from '../shared/layout-state';
 import { buildReport, detectBrowser } from '../shared/report';
 
 const send = (msg: UbiconMsg) => browser.runtime.sendMessage(msg) as Promise<UbiconReply>;
-const isDark = () => !!document.querySelector('[class*="-dark__"]');
+const isDark = () => !!document.querySelector(getSelectors().darkTheme);
 
 // Everything in this file is built node by node, never from an HTML string,
 // so no markup is ever assigned through innerHTML. el() keeps that readable. Attributes are given the way the markup would
@@ -115,10 +116,10 @@ const MODAL_BTN_CSS = `
 `;
 
 export function ensureModalButton(root: ParentNode): void {
-  for (const dialog of root.querySelectorAll('[role="dialog"][class*="modal__"]')) {
-    if (!dialog.querySelector('img[src*="fingerprint"]')) continue;
-    const header = dialog.querySelector(':scope > [class*="header__"]');
-    const title = header?.querySelector('[class*="title__"]');
+  for (const dialog of root.querySelectorAll(getSelectors().modalDialog)) {
+    if (!dialog.querySelector(getSelectors().iconImage)) continue;
+    const header = dialog.querySelector(getSelectors().modalHeader);
+    const title = header?.querySelector(getSelectors().modalTitle);
     if (!title || title.querySelector(`#${MODAL_BTN_HOST_ID}`)) continue;
     const host = document.createElement('span');
     host.id = MODAL_BTN_HOST_ID;
@@ -174,7 +175,7 @@ export function ensureHeaderBadge(root: ParentNode): void {
     if (badgeHost === existing) return;
     existing.remove();
   }
-  const svg = [...root.querySelectorAll('header svg[class*="Logo-module_logo__"]')].find(s => !s.closest('a'));
+  const svg = [...root.querySelectorAll(getSelectors().headerLogo)].find(s => !s.closest('a'));
   if (!svg) return;
   const host = document.createElement('span');
   host.id = HEADER_BADGE_ID;
@@ -217,7 +218,7 @@ export function openLayoutNotice(): void {
   let version = 'unknown';
   try { version = browser.runtime.getManifest().version; } catch {}
   const report = buildReport({
-    hooks: brk.hooks, unifiVersion: brk.unifiVersion, shell: brk.shell, console: brk.console, path: brk.path,
+    hooks: brk.hooks, unifiVersion: brk.unifiVersion, shell: brk.shell, profile: brk.profile, console: brk.console, path: brk.path,
     browser: detectBrowser(navigator.userAgent), ubiconVersion: version,
   });
 
@@ -293,9 +294,9 @@ export function openAssignPanel(mac: string): void {
       }
     }
     close();
-    const modal = [...document.querySelectorAll('[role="dialog"][class*="modal__"]')]
-      .find(d => d.querySelector('img[src*="fingerprint"]'));
-    modal?.querySelector('[class*="closeButton__"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    const modal = [...document.querySelectorAll(getSelectors().modalDialog)]
+      .find(d => d.querySelector(getSelectors().iconImage));
+    modal?.querySelector(getSelectors().modalClose)?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   };
 
   const renderDbTab = async () => {

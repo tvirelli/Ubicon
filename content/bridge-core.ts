@@ -1,3 +1,4 @@
+import { getSelectors } from './selectors';
 // Pure resolver core for the MAIN-world React props bridge. No browser
 // extension APIs here: this file is exercised directly by unit tests under
 // happy-dom, and is also imported (unmodified) by the MAIN-world content
@@ -138,9 +139,7 @@ function needsProcessing(img: Element, src: string): boolean {
 // never drift apart on what counts as a client icon.
 function collectCandidateImgs(root: ParentNode): Set<HTMLImageElement> {
   const candidates = new Set<HTMLImageElement>();
-  for (const img of root.querySelectorAll<HTMLImageElement>('img[src*="fingerprint/"]')) candidates.add(img);
-  for (const img of root.querySelectorAll<HTMLImageElement>('img[src*="/clients/photos/"]')) candidates.add(img);
-  for (const img of root.querySelectorAll<HTMLImageElement>('img[data-ubicon]')) candidates.add(img);
+  for (const img of root.querySelectorAll<HTMLImageElement>(getSelectors().iconImage)) candidates.add(img);
   return candidates;
 }
 

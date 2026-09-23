@@ -1,3 +1,4 @@
+import { getSelectors } from './selectors';
 import { browser } from 'wxt/browser';
 import { getAllAssignments, iconKey } from '../shared/storage';
 import type { AssignmentRef } from '../shared/types';
@@ -93,7 +94,7 @@ export async function loadOverlayMap(): Promise<Map<string, string>> {
 }
 
 export function currentPanelMac(root: ParentNode): string | null {
-  const panel = root.querySelector('.PROPERTY_PANEL_CLASSNAME');
+  const panel = root.querySelector(getSelectors().propertyPanel);
   if (!panel) return null;
   const m = panel.textContent?.match(MAC_RE);
   return m ? m[0].toLowerCase() : lastClickedMac;
@@ -112,20 +113,20 @@ export function currentPanelMac(root: ParentNode): string | null {
 // would either bulk-paint the wrong icon everywhere or block the sweep from
 // keying each image off its own client individually.
 function strictPanelMacOf(root: ParentNode): string | undefined {
-  const panel = root.querySelector('.PROPERTY_PANEL_CLASSNAME');
+  const panel = root.querySelector(getSelectors().propertyPanel);
   const m = panel?.textContent?.match(MAC_RE);
   return m ? m[0].toLowerCase() : undefined;
 }
 
 export function paintAll(map: Map<string, string>, root: ParentNode): void {
   let namesChanged = false;
-  for (const row of root.querySelectorAll<HTMLTableRowElement>('tr[data-row-id]')) {
+  for (const row of root.querySelectorAll<HTMLTableRowElement>(getSelectors().clientRow)) {
     const id = row.getAttribute('data-row-id');
     // UniFi reuses tr[data-row-id] for non-client tables (e.g. flows rows
     // carry a flow id here, not a MAC); only a MAC-valued id is a client row.
     if (!id || !MAC_EXACT_RE.test(id)) continue;
     const mac = id.toLowerCase();
-    const nameCell = row.querySelector<HTMLElement>('td[data-column-id="clientName"]');
+    const nameCell = row.querySelector<HTMLElement>(getSelectors().clientNameCell);
     const name = nameCell?.textContent?.trim();
     if (name && knownNames.get(mac) !== name) {
       knownNames.set(mac, name);
@@ -138,7 +139,7 @@ export function paintAll(map: Map<string, string>, root: ParentNode): void {
     else if (img.dataset.ubicon) unpaintImg(img);
   }
   if (namesChanged) persistNames();
-  const panel = root.querySelector('.PROPERTY_PANEL_CLASSNAME');
+  const panel = root.querySelector(getSelectors().propertyPanel);
   if (panel) {
     // Strict only: a panel with no MAC in its own text might not be a
     // single-client panel at all (e.g. flows' "See More" pane lists many
@@ -149,15 +150,15 @@ export function paintAll(map: Map<string, string>, root: ParentNode): void {
     if (mac) {
       const dataUri = map.get(mac);
       for (const img of panel.querySelectorAll<HTMLImageElement>('img')) {
-        const isDeviceImg = img.src.includes('fingerprint') || img.src.includes('/clients/photos/') || img.dataset.ubicon;
+        const isDeviceImg = img.matches(getSelectors().iconImage);
         if (!isDeviceImg) continue;
         if (dataUri) paintImg(img, dataUri);
         else if (img.dataset.ubicon) unpaintImg(img);
       }
     }
   }
-  for (const tab of root.querySelectorAll('[class*="viewSwitcher__"] [class*="switcherTab__"]')) {
-    const aria = tab.querySelector('[class*="switcherClose__"]')?.getAttribute('aria-label') ?? '';
+  for (const tab of root.querySelectorAll(getSelectors().viewSwitcherTab)) {
+    const aria = tab.querySelector(getSelectors().switcherClose)?.getAttribute('aria-label') ?? '';
     const m = aria.match(MAC_IN_TEXT_RE);
     const img = tab.querySelector('img');
     if (!m || !img) continue;
@@ -258,9 +259,7 @@ function readStampedMac(img: HTMLImageElement): string | undefined {
 // a React-props bridge stamp, an ancestor MAC, or an ancestor display name.
 export function sweepAllIcons(map: Map<string, string>, root: ParentNode): void {
   const candidates = new Set<HTMLImageElement>();
-  for (const img of root.querySelectorAll<HTMLImageElement>('img[src*="fingerprint/"]')) candidates.add(img);
-  for (const img of root.querySelectorAll<HTMLImageElement>('img[src*="/clients/photos/"]')) candidates.add(img);
-  for (const img of root.querySelectorAll<HTMLImageElement>('img[data-ubicon]')) candidates.add(img);
+  for (const img of root.querySelectorAll<HTMLImageElement>(getSelectors().iconImage)) candidates.add(img);
 
   const nameToMac = buildReverseNameMap();
   // Only a strict panel MAC means the panel handler actually bulk-painted
@@ -272,10 +271,10 @@ export function sweepAllIcons(map: Map<string, string>, root: ParentNode): void 
     if (img.closest('#ubicon-header-badge, #ubicon-dialog, #ubicon-tip')) continue;
     if (img.getRootNode() instanceof ShadowRoot) continue;
     // Authoritative surfaces already handled above this pass; don't double-process.
-    const row = img.closest('tr[data-row-id]');
+    const row = img.closest(getSelectors().clientRow);
     if (row && MAC_EXACT_RE.test(row.getAttribute('data-row-id') ?? '')) continue;
-    if (panelHandledThisPass && img.closest('.PROPERTY_PANEL_CLASSNAME')) continue;
-    if (img.closest('[class*="switcherTab__"]')) continue;
+    if (panelHandledThisPass && img.closest(getSelectors().propertyPanel)) continue;
+    if (img.closest(getSelectors().switcherTab)) continue;
 
     const mac = readStampedMac(img) ?? findAncestorMac(img) ?? findAncestorMacByName(img, nameToMac);
     if (!mac) continue; // not found, or ambiguous, leave untouched

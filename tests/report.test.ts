@@ -81,3 +81,7 @@ test('the body names the shell the header lives in when it is known', () => {
   expect(r.body).toContain('Shell: Site Manager 5.2.23');
   expect(buildReport(input).body).toContain('Shell: unknown');
 });
+
+test('the body names the selector profile that was in use', () => {
+  expect(buildReport({ ...input, profile: '10.6' }).body).toContain('Selector profile: 10.6');
+});

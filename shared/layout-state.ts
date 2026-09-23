@@ -8,6 +8,8 @@ export interface LayoutBreak {
   unifiVersion: string;
   // Site Manager (cloud) or UniFi OS (local), the shell the header sits in.
   shell?: string;
+  // The selector profile (content/selectors.ts) in use when the break was found.
+  profile?: string;
   console: 'cloud' | 'local';
   path: string;
   firstSeen: number;
