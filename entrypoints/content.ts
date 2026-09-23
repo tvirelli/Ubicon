@@ -2,7 +2,7 @@ import { browser } from 'wxt/browser';
 import { loadOverlayMap, hydrateNames, mergeNames, paintAll, setLastClickedMac } from '../content/state';
 import { ensureModalButton, ensureHeaderBadge, setHeaderBadgeState, setLayoutBreak } from '../content/panel';
 import { checkHooks, LayoutMonitor, readUnifiVersion } from '../content/layout-check';
-import { clearBreak, loadBreak, saveBreak } from '../shared/layout-state';
+import { clearBreak, loadBreak, saveBreak, recallUnifiVersion, rememberUnifiVersion } from '../shared/layout-state';
 
 export default defineContentScript({
   matches: ['https://unifi.ui.com/*'],
@@ -37,12 +37,19 @@ export default defineContentScript({
     // can confirm: a healthy check clears it, a repeat re-declares it.
     void loadBreak().then(stored => { if (stored) monitor.assumeDeclared(stored.signature); });
     const consoleKind = location.hostname === 'unifi.ui.com' ? 'cloud' as const : 'local' as const;
+    let unifiVersion = 'unknown';
+    void recallUnifiVersion(location.origin).then(v => { if (unifiVersion === 'unknown') unifiVersion = v; });
     const watchLayout = () => {
+      const seenVersion = readUnifiVersion(document);
+      if (seenVersion !== 'unknown' && seenVersion !== unifiVersion) {
+        unifiVersion = seenVersion;
+        void rememberUnifiVersion(location.origin, seenVersion);
+      }
       const check = checkHooks(document);
       const seen = monitor.observe(check, Date.now());
       if (seen) {
         const brk = {
-          signature: seen.signature, hooks: seen.hooks, unifiVersion: readUnifiVersion(document),
+          signature: seen.signature, hooks: seen.hooks, unifiVersion,
           console: consoleKind, path: location.pathname, firstSeen: seen.at, lastSeen: seen.at,
         };
         setLayoutBreak(brk);

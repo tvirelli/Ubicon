@@ -13,6 +13,21 @@ export interface LayoutBreak {
 }
 
 const BREAK_KEY = 'layoutBreak';
+const VERSIONS_KEY = 'unifiVersions';
+
+// The Network version only appears on the dashboard; it is remembered per
+// console origin so a break found on another page can still name it.
+export async function rememberUnifiVersion(origin: string, version: string): Promise<void> {
+  const got = await browser.storage.local.get(VERSIONS_KEY);
+  const map = (got[VERSIONS_KEY] as Record<string, string> | undefined) ?? {};
+  if (map[origin] === version) return;
+  await browser.storage.local.set({ [VERSIONS_KEY]: { ...map, [origin]: version } });
+}
+
+export async function recallUnifiVersion(origin: string): Promise<string> {
+  const got = await browser.storage.local.get(VERSIONS_KEY);
+  return (got[VERSIONS_KEY] as Record<string, string> | undefined)?.[origin] ?? 'unknown';
+}
 const DISMISSED_KEY = 'layoutBreakDismissed';
 
 export async function loadBreak(): Promise<LayoutBreak | null> {

@@ -46,6 +46,12 @@ test('rows with icons but no property panel is not a break (the panel is only op
   expect(broken(LOGO + ROW())).toEqual([]);
 });
 
+test('readUnifiVersion reads the Network version from the dashboard panel, non-breaking space included', () => {
+  const dash = '<div data-testid="dashboard-network-version"><span>Network&nbsp;10.6.106</span><span>Up to date</span></div>'
+    + '<div data-testid="dashboard-unifi-os-version"><span>UniFi OS&nbsp;5.1.33</span></div>';
+  expect(readUnifiVersion(set(dash))).toBe('10.6.106');
+});
+
 test('readUnifiVersion finds a version in the page and falls back to unknown', () => {
   expect(readUnifiVersion(set('<script>window.__CONFIG__={"version":"9.3.45"}</script>'))).toBe('9.3.45');
   expect(readUnifiVersion(set('<meta name="unifi-network-version" content="9.4.0">'))).toBe('9.4.0');

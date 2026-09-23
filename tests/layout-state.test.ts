@@ -43,3 +43,12 @@ test('clearing removes the break and forgets the dismissal', async () => {
   await saveBreak(brk);
   expect((await visibleBreak())?.signature).toBe('clients-table');
 });
+
+test('the UniFi version seen on the dashboard is remembered per console for pages that do not show it', async () => {
+  const { recallUnifiVersion, rememberUnifiVersion } = await import('../shared/layout-state');
+  expect(await recallUnifiVersion('https://unifi.ui.com')).toBe('unknown');
+  await rememberUnifiVersion('https://unifi.ui.com', '10.6.106');
+  await rememberUnifiVersion('https://192.168.1.1', '9.3.45');
+  expect(await recallUnifiVersion('https://unifi.ui.com')).toBe('10.6.106');
+  expect(await recallUnifiVersion('https://192.168.1.1')).toBe('9.3.45');
+});
