@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
 import { loadOverlayMap, hydrateNames, mergeNames, paintAll, setLastClickedMac } from '../content/state';
-import { ensureModalButton, ensureHeaderBadge, setHeaderBadgeState } from '../content/panel';
+import { ensureModalButton, ensureHeaderBadge, setHeaderBadgeState, setLayoutBreak } from '../content/panel';
 import { checkHooks, LayoutMonitor, readUnifiVersion } from '../content/layout-check';
 import { clearBreak, saveBreak } from '../shared/layout-state';
 
@@ -38,12 +38,15 @@ export default defineContentScript({
       const check = checkHooks(document);
       const seen = monitor.observe(check, Date.now());
       if (seen) {
-        setHeaderBadgeState('warn');
-        void saveBreak({
+        const brk = {
           signature: seen.signature, hooks: seen.hooks, unifiVersion: readUnifiVersion(document),
           console: consoleKind, path: location.pathname, firstSeen: seen.at, lastSeen: seen.at,
-        });
+        };
+        setLayoutBreak(brk);
+        setHeaderBadgeState('warn');
+        void saveBreak(brk);
       } else if (monitor.recovered(check)) {
+        setLayoutBreak(null);
         setHeaderBadgeState('ok');
         void clearBreak();
       }

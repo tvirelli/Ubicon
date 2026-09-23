@@ -78,3 +78,60 @@ test('a badge created while the state is already warn starts amber', async () =>
   expect(document.getElementById('ubicon-header-badge')!.dataset.state).toBe('warn');
   setHeaderBadgeState('ok');
 });
+
+// The amber badge opens an on-page dialog with the report actions. Its
+// shadow root is closed, so it is caught as it is attached.
+async function badgeDialog() {
+  const { setHeaderBadgeState, setLayoutBreak } = await import('../content/panel');
+  const roots: ShadowRoot[] = [];
+  const { vi } = await import('vitest');
+  const attach = Element.prototype.attachShadow;
+  vi.spyOn(Element.prototype, 'attachShadow').mockImplementation(function (this: Element, init: ShadowRootInit) {
+    const root = attach.call(this, init);
+    roots.push(root);
+    return root;
+  });
+  (fakeBrowser.runtime as unknown as { getManifest: () => { version: string } }).getManifest = () => ({ version: '0.4.0' });
+  setLayoutBreak({ signature: 'clients-table', hooks: ['clients-table'], unifiVersion: '9.3.45', console: 'cloud', path: '/network/default/clients', firstSeen: 1, lastSeen: 2 });
+  setHeaderBadgeState('warn');
+  headerDom();
+  ensureHeaderBadge(document);
+  const host = document.getElementById('ubicon-header-badge')!;
+  return { host, roots, setHeaderBadgeState, setLayoutBreak, vi };
+}
+
+test('clicking the amber badge opens a dialog with the GitHub, email and dismiss actions', async () => {
+  const { host, roots, setHeaderBadgeState, setLayoutBreak, vi } = await badgeDialog();
+  host.click();
+  const dlgHost = document.getElementById('ubicon-layout-dialog');
+  expect(dlgHost).not.toBeNull();
+  const root = roots.find(r => r.host === dlgHost)!;
+  expect(root.querySelector('header')!.textContent).toContain("UniFi's layout changed");
+  const gh = root.querySelector<HTMLAnchorElement>('a[data-action="github"]')!;
+  expect(gh.href.startsWith('https://github.com/tvirelli/Ubicon/issues/new?')).toBe(true);
+  expect(new URL(gh.href).searchParams.get('title')).toBe('Layout change detected: UniFi 9.3.45, clients-table');
+  expect(gh.target).toBe('_blank');
+  const mail = root.querySelector<HTMLAnchorElement>('a[data-action="email"]')!;
+  expect(mail.href.startsWith('mailto:ubicon@tonyvirelli.com?')).toBe(true);
+  expect(root.querySelector('button[data-action="dismiss"]')).not.toBeNull();
+  setHeaderBadgeState('ok'); setLayoutBreak(null); vi.restoreAllMocks();
+});
+
+test('dismiss closes the dialog and leaves the badge amber', async () => {
+  const { host, roots, setHeaderBadgeState, setLayoutBreak, vi } = await badgeDialog();
+  host.click();
+  const dlgHost = document.getElementById('ubicon-layout-dialog')!;
+  const root = roots.find(r => r.host === dlgHost)!;
+  root.querySelector<HTMLButtonElement>('button[data-action="dismiss"]')!.click();
+  expect(document.getElementById('ubicon-layout-dialog')).toBeNull();
+  expect(host.dataset.state).toBe('warn');
+  setHeaderBadgeState('ok'); setLayoutBreak(null); vi.restoreAllMocks();
+});
+
+test('clicking the badge while it is purple opens nothing', async () => {
+  const { setHeaderBadgeState, setLayoutBreak, vi } = await badgeDialog();
+  setHeaderBadgeState('ok');
+  document.getElementById('ubicon-header-badge')!.click();
+  expect(document.getElementById('ubicon-layout-dialog')).toBeNull();
+  setLayoutBreak(null); vi.restoreAllMocks();
+});

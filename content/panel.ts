@@ -2,6 +2,8 @@ import { browser } from 'wxt/browser';
 import type { UbiconMsg, UbiconReply } from '../shared/messages';
 import type { DeviceRecord } from '../shared/types';
 import { currentPanelMac } from './state';
+import type { LayoutBreak } from '../shared/layout-state';
+import { buildReport, detectBrowser } from '../shared/report';
 
 const send = (msg: UbiconMsg) => browser.runtime.sendMessage(msg) as Promise<UbiconReply>;
 const isDark = () => !!document.querySelector('[class*="-dark__"]');
@@ -158,6 +160,7 @@ export function setHeaderBadgeState(state: BadgeState): void {
   if (!host || !badgeShadow) return;
   host.title = BADGE_TEXT[state];
   host.dataset.state = state;
+  host.style.cursor = state === 'warn' ? 'pointer' : '';
   badgeShadow.querySelector('svg')?.replaceWith(ubiconMark(16, BADGE_COLOR[state]));
 }
 
@@ -169,6 +172,7 @@ export function ensureHeaderBadge(root: ParentNode): void {
   host.id = HEADER_BADGE_ID;
   host.title = BADGE_TEXT[badgeState];
   host.dataset.state = badgeState;
+  host.addEventListener('click', () => { if (badgeState === 'warn') openLayoutNotice(); });
   host.style.cssText = 'display:inline-flex;align-items:center;height:50px;vertical-align:top;margin-left:-8px;';
   const shadow = host.attachShadow({ mode: 'closed' });
   const style = document.createElement('style');
@@ -176,6 +180,63 @@ export function ensureHeaderBadge(root: ParentNode): void {
   shadow.append(style, ubiconMark(16, BADGE_COLOR[badgeState]));
   badgeShadow = shadow;
   svg.insertAdjacentElement('afterend', host);
+}
+
+// The break the amber badge reports on; set by the content script when
+// content/layout-check.ts declares one, cleared on recovery.
+const LAYOUT_DLG_ID = 'ubicon-layout-dialog';
+let layoutBreak: LayoutBreak | null = null;
+export function setLayoutBreak(brk: LayoutBreak | null): void { layoutBreak = brk; }
+
+const LAYOUT_CSS = `
+  .note { padding: 12px 16px 4px; font-size: 13px; line-height: 1.5; color: var(--fg); }
+  .note p { margin: 0 0 8px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 16px 16px; }
+  .actions a, .actions button { font: inherit; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 8px;
+    border: 1px solid #C77A00; color: #C77A00; background: none; text-decoration: none; cursor: pointer; }
+  .actions .solid { background: #C77A00; border-color: #C77A00; color: #fff; }
+  .dlg.dark .actions a, .dlg.dark .actions button { border-color: #F0C15C; color: #F0C15C; }
+  .dlg.dark .actions .solid { background: #F0C15C; border-color: #F0C15C; color: #1e222b; }
+`;
+
+// Opened by a click on the amber badge: the same three actions the popup
+// notice offers. Dismiss only closes the dialog; the badge stays amber.
+export function openLayoutNotice(): void {
+  const brk = layoutBreak;
+  if (!brk) return;
+  document.getElementById(LAYOUT_DLG_ID)?.remove();
+  let version = 'unknown';
+  try { version = browser.runtime.getManifest().version; } catch {}
+  const report = buildReport({
+    hooks: brk.hooks, unifiVersion: brk.unifiVersion, console: brk.console, path: brk.path,
+    browser: detectBrowser(navigator.userAgent), ubiconVersion: version,
+  });
+
+  const host = document.createElement('div');
+  host.id = LAYOUT_DLG_ID;
+  const shadow = host.attachShadow({ mode: 'closed' });
+  const style = document.createElement('style');
+  style.textContent = CSS + LAYOUT_CSS;
+  const overlay = el('div', { class: 'overlay' });
+  const dlg = el('div', { class: 'dlg' + (isDark() ? ' dark' : ''), role: 'dialog', 'aria-label': "UniFi's layout changed" });
+  const closeBtn = el('button', { 'data-x': '', 'aria-label': 'Close' }, '✕');
+  const dismiss = el('button', { 'data-action': 'dismiss' }, 'Dismiss');
+  dlg.append(
+    el('header', {}, el('span', {}, "Ubicon: UniFi's layout changed"), closeBtn),
+    el('div', { class: 'note' },
+      el('p', {}, "UniFi's page no longer matches what Ubicon looks for, so icons may be missing until an update."),
+      el('p', {}, 'Reporting it takes one click. The report names the page parts that changed and your browser, nothing about your devices or network.')),
+    el('div', { class: 'actions' },
+      el('a', { class: 'solid', 'data-action': 'github', href: report.issueUrl, target: '_blank', rel: 'noopener' }, 'Report on GitHub'),
+      el('a', { 'data-action': 'email', href: report.mailtoUrl }, 'Email us this'),
+      dismiss));
+  const close = () => host.remove();
+  overlay.addEventListener('click', close);
+  closeBtn.addEventListener('click', close);
+  dismiss.addEventListener('click', close);
+  dlg.addEventListener('keydown', e => { e.stopPropagation(); if ((e as KeyboardEvent).key === 'Escape') close(); });
+  shadow.append(style, overlay, dlg);
+  document.body.append(host);
 }
 
 export function openAssignPanel(mac: string): void {
