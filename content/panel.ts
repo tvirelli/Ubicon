@@ -101,11 +101,11 @@ export function showTip(text: string): void {
 }
 
 // The Ubicon mark (design/ubicon-icon.svg), drawn at the given pixel size.
-const ubiconMark = (size: number) =>
+const ubiconMark = (size: number, color = '#5B3FD1') =>
   svgEl('svg', { xmlns: SVG_NS, viewBox: '0 0 128 128', width: String(size), height: String(size) },
-    svgEl('path', { d: 'M23 30 V86 A19 19 0 0 0 42 105 H86 A19 19 0 0 0 105 86 V52', fill: 'none', stroke: '#5B3FD1', 'stroke-width': '14', 'stroke-linecap': 'round' }),
-    svgEl('rect', { x: '98', y: '23', width: '14', height: '14', rx: '4', fill: '#5B3FD1' }),
-    svgEl('rect', { x: '44', y: '44', width: '40', height: '40', rx: '10', fill: '#5B3FD1' }));
+    svgEl('path', { d: 'M23 30 V86 A19 19 0 0 0 42 105 H86 A19 19 0 0 0 105 86 V52', fill: 'none', stroke: color, 'stroke-width': '14', 'stroke-linecap': 'round' }),
+    svgEl('rect', { x: '98', y: '23', width: '14', height: '14', rx: '4', fill: color }),
+    svgEl('rect', { x: '44', y: '44', width: '40', height: '40', rx: '10', fill: color }));
 
 const MODAL_BTN_CSS = `
   :host { all: initial; }
@@ -141,18 +141,40 @@ const HEADER_BADGE_CSS = `
   svg { display:block; }
 `;
 
+// The badge doubles as the layout-change notice: amber with a different
+// title when content/layout-check.ts has declared a break.
+export type BadgeState = 'ok' | 'warn';
+const BADGE_TEXT: Record<BadgeState, string> = {
+  ok: 'Ubicon is active',
+  warn: "UniFi's layout changed. Ubicon may not work until an update.",
+};
+const BADGE_COLOR: Record<BadgeState, string> = { ok: '#5B3FD1', warn: '#C77A00' };
+let badgeState: BadgeState = 'ok';
+let badgeShadow: ShadowRoot | undefined;
+
+export function setHeaderBadgeState(state: BadgeState): void {
+  badgeState = state;
+  const host = document.getElementById(HEADER_BADGE_ID);
+  if (!host || !badgeShadow) return;
+  host.title = BADGE_TEXT[state];
+  host.dataset.state = state;
+  badgeShadow.querySelector('svg')?.replaceWith(ubiconMark(16, BADGE_COLOR[state]));
+}
+
 export function ensureHeaderBadge(root: ParentNode): void {
   if (document.getElementById(HEADER_BADGE_ID)) return;
   const svg = [...root.querySelectorAll('header svg[class*="Logo-module_logo__"]')].find(s => !s.closest('a'));
   if (!svg) return;
   const host = document.createElement('span');
   host.id = HEADER_BADGE_ID;
-  host.title = 'Ubicon is active';
+  host.title = BADGE_TEXT[badgeState];
+  host.dataset.state = badgeState;
   host.style.cssText = 'display:inline-flex;align-items:center;height:50px;vertical-align:top;margin-left:-8px;';
   const shadow = host.attachShadow({ mode: 'closed' });
   const style = document.createElement('style');
   style.textContent = HEADER_BADGE_CSS;
-  shadow.append(style, ubiconMark(16));
+  shadow.append(style, ubiconMark(16, BADGE_COLOR[badgeState]));
+  badgeShadow = shadow;
   svg.insertAdjacentElement('afterend', host);
 }
 

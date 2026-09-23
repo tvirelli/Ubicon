@@ -55,3 +55,26 @@ test('ensureHeaderBadge is idempotent: calling twice does not duplicate', () => 
   ensureHeaderBadge(document);
   expect(document.querySelectorAll('#ubicon-header-badge').length).toBe(1);
 });
+
+test('the header badge can be switched to the warning state and back', async () => {
+  const { setHeaderBadgeState } = await import('../content/panel');
+  headerDom();
+  ensureHeaderBadge(document);
+  const host = document.getElementById('ubicon-header-badge')!;
+  expect(host.title).toBe('Ubicon is active');
+  setHeaderBadgeState('warn');
+  expect(host.title).toBe("UniFi's layout changed. Ubicon may not work until an update.");
+  expect(host.dataset.state).toBe('warn');
+  setHeaderBadgeState('ok');
+  expect(host.title).toBe('Ubicon is active');
+  expect(host.dataset.state).toBe('ok');
+});
+
+test('a badge created while the state is already warn starts amber', async () => {
+  const { setHeaderBadgeState } = await import('../content/panel');
+  setHeaderBadgeState('warn');
+  headerDom();
+  ensureHeaderBadge(document);
+  expect(document.getElementById('ubicon-header-badge')!.dataset.state).toBe('warn');
+  setHeaderBadgeState('ok');
+});

@@ -1,6 +1,8 @@
 import { browser } from 'wxt/browser';
 import { loadOverlayMap, hydrateNames, mergeNames, paintAll, setLastClickedMac } from '../content/state';
-import { ensureModalButton, ensureHeaderBadge } from '../content/panel';
+import { ensureModalButton, ensureHeaderBadge, setHeaderBadgeState } from '../content/panel';
+import { checkHooks, LayoutMonitor, readUnifiVersion } from '../content/layout-check';
+import { clearBreak, saveBreak } from '../shared/layout-state';
 
 export default defineContentScript({
   matches: ['https://unifi.ui.com/*'],
@@ -26,6 +28,27 @@ export default defineContentScript({
       return fp;
     }
 
+    // Layout-change detection (content/layout-check.ts): after each repaint,
+    // ask whether the hooks Ubicon paints through still match, and only
+    // after repeated failures turn the badge amber and store the break for
+    // the popup and options page to show.
+    const monitor = new LayoutMonitor({ startedAt: Date.now() });
+    const consoleKind = location.hostname === 'unifi.ui.com' ? 'cloud' as const : 'local' as const;
+    const watchLayout = () => {
+      const check = checkHooks(document);
+      const seen = monitor.observe(check, Date.now());
+      if (seen) {
+        setHeaderBadgeState('warn');
+        void saveBreak({
+          signature: seen.signature, hooks: seen.hooks, unifiVersion: readUnifiVersion(document),
+          console: consoleKind, path: location.pathname, firstSeen: seen.at, lastSeen: seen.at,
+        });
+      } else if (monitor.recovered(check)) {
+        setHeaderBadgeState('ok');
+        void clearBreak();
+      }
+    };
+
     let debounceTimer: ReturnType<typeof setTimeout> | undefined;
     let lastFingerprint: string | undefined;
     // MutationObserver can fire dozens of times per second while UniFi's
@@ -36,6 +59,7 @@ export default defineContentScript({
       debounceTimer = setTimeout(() => {
         paintAll(map, document);
         try { ensureModalButton(document); ensureHeaderBadge(document); } catch {}
+        try { watchLayout(); } catch {}
         // Ask the MAIN-world bridge (entrypoints/bridge.content.ts) to
         // (re)resolve any icons it can key off React's internal props. It
         // replies with 'ubicon:resolved'. Only worth firing when the

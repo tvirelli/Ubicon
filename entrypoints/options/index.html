@@ -25,6 +25,15 @@
         </div>
       </aside>
 
+      <aside id="layout-warning" class="notice warn" role="status" aria-label="UniFi layout changed" hidden>
+        <p>UniFi's layout changed. Ubicon may not work until an update. Reporting it takes one click; the report names the page parts that changed and your browser, nothing about your devices or network.</p>
+        <div class="notice-actions">
+          <a id="layout-issue" class="btn small primary" href="#">Report this issue</a>
+          <a id="layout-mail" class="btn small" href="#">Email us this</a>
+          <button id="layout-dismiss" type="button" class="btn small">Dismiss</button>
+        </div>
+      </aside>
+
       <section id="sync" class="block" aria-labelledby="sync-h">
         <h2 id="sync-h">GitHub sync</h2>
 
@@ -149,6 +158,19 @@
         </form>
         <p id="msg" class="field-note" role="status"></p>
         <ul id="origins" class="origins"></ul>
+      </section>
+
+      <section id="report-block" class="block" aria-labelledby="report-h">
+        <h2 id="report-h">Report a problem</h2>
+        <p>
+          Both buttons open a report with your browser and Ubicon version
+          already filled in. Add what happened. Nothing about your devices or
+          network is included unless you type it.
+        </p>
+        <div class="notice-actions">
+          <a id="report-issue" class="btn small primary" href="#">Open a GitHub issue</a>
+          <a id="report-mail" class="btn small" href="#">Email ubicon@tonyvirelli.com</a>
+        </div>
       </section>
     </div>
 

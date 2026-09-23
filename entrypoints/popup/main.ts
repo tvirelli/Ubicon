@@ -4,6 +4,7 @@ import { addConsoleOrigin, listConsoleOrigins, removeConsoleOrigin } from '../..
 import type { UbiconMsg, UbiconReply } from '../../shared/messages';
 import { VIEW_ONLY_TEXT } from '../../shared/sync/ui-text';
 import { initPopupSync } from './sync';
+import { initLayoutNotice } from '../../shared/layout-notice';
 
 const send = (msg: UbiconMsg) => browser.runtime.sendMessage(msg) as Promise<UbiconReply>;
 const $ = (id: string) => document.getElementById(id)!;
@@ -241,3 +242,6 @@ initPopupSync(status => {
   readOnly = locked;
   renderList();
 });
+
+// The layout-change notice, if the content script has stored one.
+void initLayoutNotice({ aside: 'layout-warning', issue: 'layout-issue', mail: 'layout-mail', dismiss: 'layout-dismiss' });
