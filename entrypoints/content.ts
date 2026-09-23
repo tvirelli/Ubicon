@@ -9,6 +9,9 @@ export default defineContentScript({
   matches: ['https://unifi.ui.com/*'],
   runAt: 'document_idle',
   async main() {
+    // On a local console (a dynamically registered origin), the toolbar icon
+    // may be showing "available here"; this tab has Ubicon running.
+    if (location.hostname !== 'unifi.ui.com') browser.runtime.sendMessage({ type: 'console-active' }).catch(() => {});
     const [map0] = await Promise.all([loadOverlayMap(), hydrateNames()]);
     let map = map0;
 

@@ -1,3 +1,4 @@
+import { installConsoleRules, markConsoleActive } from '../shared/console-icon';
 import { browser } from 'wxt/browser';
 import type { UbiconMsg, UbiconReply } from '../shared/messages';
 import { fetchIndex, iconUrlFor, searchDevices } from '../shared/db';
@@ -36,6 +37,7 @@ async function downloadDbIcon(deviceId: string): Promise<string> {
 const CHANGES_ASSIGNMENTS = new Set<UbiconMsg['type']>(['assign-db', 'assign-custom', 'unassign', 'import']);
 
 export async function handleMessage(msg: UbiconMsg): Promise<UbiconReply> {
+  if (msg.type === 'console-active') return { ok: true };
   try {
     // One check here covers every page that can send a change (the UniFi
     // page's picker, the popup, Options); the pages also disable their
@@ -192,10 +194,19 @@ function flashBadge(text: string): void {
 }
 
 export default defineBackground(() => {
-  browser.runtime.onMessage.addListener((msg: UbiconMsg, _sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((msg: UbiconMsg, sender, sendResponse) => {
+    if (msg.type === 'console-active') {
+      // sender.tab is set for messages from content scripts.
+      if (sender.tab?.id != null) markConsoleActive(sender.tab.id).catch(() => {});
+      sendResponse({ ok: true });
+      return false;
+    }
     handleMessage(msg).then(sendResponse);
     return true; // async response
   });
+  // The rules survive restarts, but re-installing on startup keeps them in
+  // step with the code after an update.
+  installConsoleRules().catch(() => {});
   browser.alarms.create('ubicon-refresh', { periodInMinutes: 720 });
   browser.alarms.onAlarm.addListener(a => {
     if (a.name === 'ubicon-refresh') fetchIndex(true).catch(() => {});
@@ -211,6 +222,7 @@ export default defineBackground(() => {
   });
   browser.runtime.onInstalled.addListener(() => {
     ensureRegisteredOrigins().catch(() => {});
+    installConsoleRules().catch(() => {});
     try {
       // 'action' is the correct context on both Chrome and Firefox MV3.
       // Note: contextMenus.create returns the new menu id synchronously on

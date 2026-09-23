@@ -20,7 +20,10 @@ export type UbiconMsg =
   | { type: 'sync-now' }
   | { type: 'sync-status' }
   | { type: 'sync-setup-code' }
-  | { type: 'sync-dismiss-hint' };
+  | { type: 'sync-dismiss-hint' }
+  // From a content script on a local console: this tab shows the normal
+  // toolbar icon, whatever the console rules decided (shared/console-icon.ts).
+  | { type: 'console-active' };
 
 export type UbiconReply =
   | {

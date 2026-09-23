@@ -9,7 +9,13 @@ export default defineConfig({
     name: 'Ubicon - Device Icons for UniFi',
     description:
       'Community and custom icons for clients that UniFi does not recognize. Visual overlay only, never touches your UniFi settings.',
-    permissions: ['storage', 'unlimitedStorage', 'alarms', 'scripting', 'contextMenus', 'activeTab'],
+    permissions: [
+      'storage', 'unlimitedStorage', 'alarms', 'scripting', 'contextMenus', 'activeTab',
+      // The page-state rule engine that lights up the toolbar icon on a
+      // UniFi console the user has not enabled yet (shared/console-rules.ts).
+      // Chrome shows no warning for it; Firefox does not have it.
+      ...(browser === 'firefox' ? [] : ['declarativeContent']),
+    ],
     host_permissions: [
       'https://unifi.ui.com/*',
       'https://cdn.jsdelivr.net/*',
