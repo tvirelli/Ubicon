@@ -10,6 +10,7 @@ export interface ReportInput {
   // Present for a layout break, absent for a general problem report.
   hooks?: string[];
   unifiVersion?: string;
+  shell?: string;
   console?: 'cloud' | 'local';
   path?: string;
   browser: string;
@@ -40,6 +41,7 @@ export function buildReport(input: ReportInput): Report {
     lines.push('');
     lines.push(`Hooks that no longer match: ${input.hooks!.join(', ')}`);
     lines.push(`UniFi Network version: ${input.unifiVersion ?? 'unknown'}`);
+    lines.push(`Shell: ${input.shell ?? 'unknown'}`);
     lines.push(`Console: ${input.console === 'local' ? 'local (self-hosted)' : 'cloud (unifi.ui.com)'}`);
     lines.push(`Page: ${input.path ?? 'unknown'}`);
   } else {

@@ -6,6 +6,8 @@ export interface LayoutBreak {
   signature: string;
   hooks: string[];
   unifiVersion: string;
+  // Site Manager (cloud) or UniFi OS (local), the shell the header sits in.
+  shell?: string;
   console: 'cloud' | 'local';
   path: string;
   firstSeen: number;
@@ -15,20 +17,28 @@ export interface LayoutBreak {
 const BREAK_KEY = 'layoutBreak';
 const DISMISSED_KEY = 'layoutBreakDismissed';
 const VERSIONS_KEY = 'unifiVersions';
+const SHELLS_KEY = 'shellVersions';
 
-// The Network version only appears on the dashboard; it is remembered per
-// console origin so a break found on another page can still name it.
-export async function rememberUnifiVersion(origin: string, version: string): Promise<void> {
-  const got = await browser.storage.local.get(VERSIONS_KEY);
-  const map = (got[VERSIONS_KEY] as Record<string, string> | undefined) ?? {};
-  if (map[origin] === version) return;
-  await browser.storage.local.set({ [VERSIONS_KEY]: { ...map, [origin]: version } });
+// Versions only appear on some pages (the Network version on the dashboard
+// and settings overview, the shell version in the account menu or on the
+// dashboard), so each is remembered per console origin for the pages that
+// do not show it.
+async function remember(key: string, origin: string, value: string): Promise<void> {
+  const got = await browser.storage.local.get(key);
+  const map = (got[key] as Record<string, string> | undefined) ?? {};
+  if (map[origin] === value) return;
+  await browser.storage.local.set({ [key]: { ...map, [origin]: value } });
 }
 
-export async function recallUnifiVersion(origin: string): Promise<string> {
-  const got = await browser.storage.local.get(VERSIONS_KEY);
-  return (got[VERSIONS_KEY] as Record<string, string> | undefined)?.[origin] ?? 'unknown';
+async function recall(key: string, origin: string): Promise<string> {
+  const got = await browser.storage.local.get(key);
+  return (got[key] as Record<string, string> | undefined)?.[origin] ?? 'unknown';
 }
+
+export const rememberUnifiVersion = (origin: string, version: string) => remember(VERSIONS_KEY, origin, version);
+export const recallUnifiVersion = (origin: string) => recall(VERSIONS_KEY, origin);
+export const rememberShellVersion = (origin: string, version: string) => remember(SHELLS_KEY, origin, version);
+export const recallShellVersion = (origin: string) => recall(SHELLS_KEY, origin);
 
 export async function loadBreak(): Promise<LayoutBreak | null> {
   const got = await browser.storage.local.get(BREAK_KEY);

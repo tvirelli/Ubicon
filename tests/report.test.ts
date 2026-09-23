@@ -75,3 +75,9 @@ test('the email link uses percent encoding, never plus signs, so mail clients sh
   expect(decodeURIComponent(body)).toBe(r.body);
   expect(body).toContain('%0A');
 });
+
+test('the body names the shell the header lives in when it is known', () => {
+  const r = buildReport({ ...input, shell: 'Site Manager 5.2.23' });
+  expect(r.body).toContain('Shell: Site Manager 5.2.23');
+  expect(buildReport(input).body).toContain('Shell: unknown');
+});

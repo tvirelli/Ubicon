@@ -52,3 +52,10 @@ test('the UniFi version seen on the dashboard is remembered per console for page
   expect(await recallUnifiVersion('https://unifi.ui.com')).toBe('10.6.106');
   expect(await recallUnifiVersion('https://192.168.1.1')).toBe('9.3.45');
 });
+
+test('the shell version (Site Manager or UniFi OS) is remembered per console too', async () => {
+  const { recallShellVersion, rememberShellVersion } = await import('../shared/layout-state');
+  expect(await recallShellVersion('https://unifi.ui.com')).toBe('unknown');
+  await rememberShellVersion('https://unifi.ui.com', 'Site Manager 5.2.23');
+  expect(await recallShellVersion('https://unifi.ui.com')).toBe('Site Manager 5.2.23');
+});

@@ -217,7 +217,7 @@ export function openLayoutNotice(): void {
   let version = 'unknown';
   try { version = browser.runtime.getManifest().version; } catch {}
   const report = buildReport({
-    hooks: brk.hooks, unifiVersion: brk.unifiVersion, console: brk.console, path: brk.path,
+    hooks: brk.hooks, unifiVersion: brk.unifiVersion, shell: brk.shell, console: brk.console, path: brk.path,
     browser: detectBrowser(navigator.userAgent), ubiconVersion: version,
   });
 

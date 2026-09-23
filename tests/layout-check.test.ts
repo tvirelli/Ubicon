@@ -115,3 +115,12 @@ test('a break remembered from an earlier page load counts as declared, so a heal
   expect(m.recovered(healthy)).toBe(true);
   expect(m.recovered(healthy)).toBe(false);
 });
+
+test('readShellVersion reads Site Manager from the account menu and UniFi OS from the dashboard', async () => {
+  const { readShellVersion } = await import('../content/layout-check');
+  const menu = '<section data-uic-component="Popover.Dialog"><footer><ul><li><p><a href="https://community.ui.com/releases/r/site-manager/5.2.23">Site Manager 5.2.23</a></p></li></ul></footer></section>';
+  expect(readShellVersion(set(menu))).toBe('Site Manager 5.2.23');
+  const dash = '<div data-testid="dashboard-unifi-os-version"><span>UniFi OS&nbsp;5.1.33</span><span>Up to date</span></div>';
+  expect(readShellVersion(set(dash))).toBe('UniFi OS 5.1.33');
+  expect(readShellVersion(set('<div>nothing</div>'))).toBe('unknown');
+});

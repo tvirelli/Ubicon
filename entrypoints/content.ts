@@ -1,8 +1,8 @@
 import { browser } from 'wxt/browser';
 import { loadOverlayMap, hydrateNames, mergeNames, paintAll, setLastClickedMac } from '../content/state';
 import { ensureModalButton, ensureHeaderBadge, setHeaderBadgeState, setLayoutBreak } from '../content/panel';
-import { checkHooks, LayoutMonitor, readUnifiVersion } from '../content/layout-check';
-import { clearBreak, loadBreak, saveBreak, recallUnifiVersion, rememberUnifiVersion } from '../shared/layout-state';
+import { checkHooks, LayoutMonitor, readShellVersion, readUnifiVersion } from '../content/layout-check';
+import { clearBreak, loadBreak, saveBreak, recallShellVersion, recallUnifiVersion, rememberShellVersion, rememberUnifiVersion } from '../shared/layout-state';
 
 export default defineContentScript({
   matches: ['https://unifi.ui.com/*'],
@@ -38,18 +38,25 @@ export default defineContentScript({
     void loadBreak().then(stored => { if (stored) monitor.assumeDeclared(stored.signature); });
     const consoleKind = location.hostname === 'unifi.ui.com' ? 'cloud' as const : 'local' as const;
     let unifiVersion = 'unknown';
+    let shell = 'unknown';
     void recallUnifiVersion(location.origin).then(v => { if (unifiVersion === 'unknown') unifiVersion = v; });
+    void recallShellVersion(location.origin).then(v => { if (shell === 'unknown') shell = v; });
     const watchLayout = () => {
       const seenVersion = readUnifiVersion(document);
       if (seenVersion !== 'unknown' && seenVersion !== unifiVersion) {
         unifiVersion = seenVersion;
         void rememberUnifiVersion(location.origin, seenVersion);
       }
+      const seenShell = readShellVersion(document);
+      if (seenShell !== 'unknown' && seenShell !== shell) {
+        shell = seenShell;
+        void rememberShellVersion(location.origin, seenShell);
+      }
       const check = checkHooks(document);
       const seen = monitor.observe(check, Date.now());
       if (seen) {
         const brk = {
-          signature: seen.signature, hooks: seen.hooks, unifiVersion,
+          signature: seen.signature, hooks: seen.hooks, unifiVersion, shell,
           console: consoleKind, path: location.pathname, firstSeen: seen.at, lastSeen: seen.at,
         };
         setLayoutBreak(brk);

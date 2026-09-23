@@ -74,6 +74,20 @@ export function readUnifiVersion(root: ParentNode): string {
   return 'unknown';
 }
 
+// The shell around Network, which the header hook lives in: Site Manager on
+// unifi.ui.com, shown in the account menu (a popover that exists only while
+// open), or UniFi OS on a local console, shown on the dashboard. Seen on
+// Site Manager 5.2.23 and UniFi OS 5.1.33.
+export function readShellVersion(root: ParentNode): string {
+  const sm = root.querySelector('a[href*="/releases/r/site-manager/"]');
+  const m1 = /Site Manager\s+(\d+(?:\.\d+)+)/.exec((sm?.textContent ?? '').replace(/ /g, ' '));
+  if (m1?.[1]) return `Site Manager ${m1[1]}`;
+  const os = root.querySelector('[data-testid="dashboard-unifi-os-version"]');
+  const m2 = /UniFi OS\s+(\d+(?:\.\d+)+)/.exec((os?.textContent ?? '').replace(/ /g, ' '));
+  if (m2?.[1]) return `UniFi OS ${m2[1]}`;
+  return 'unknown';
+}
+
 export interface LayoutBreakSeen {
   hooks: HookName[];
   signature: string;
