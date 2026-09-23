@@ -56,6 +56,8 @@ export function buildReport(input: ReportInput): Report {
   issue.searchParams.set('labels', layout ? LABEL : 'bug');
   issue.searchParams.set('body', body);
 
-  const mail = new URLSearchParams({ subject: title, body });
-  return { title, body, issueUrl: issue.toString(), mailtoUrl: `mailto:${SUPPORT_EMAIL}?${mail.toString()}` };
+  // mailto takes percent encoding only: a mail client shows a "+" as a
+  // literal plus sign, unlike a web form.
+  const mailtoUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+  return { title, body, issueUrl: issue.toString(), mailtoUrl };
 }

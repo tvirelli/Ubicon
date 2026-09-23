@@ -64,3 +64,14 @@ test('a general problem report has no hooks and leaves room for the user to desc
   expect(r.body).toContain('What happened:');
   expect(r.body).not.toContain('Hooks');
 });
+
+test('the email link uses percent encoding, never plus signs, so mail clients show real spaces', () => {
+  const r = buildReport(input);
+  const query = r.mailtoUrl.slice(r.mailtoUrl.indexOf('?') + 1);
+  expect(query).not.toContain('+');
+  const subject = /(?:^|&)subject=([^&]*)/.exec(query)![1]!;
+  const body = /(?:^|&)body=([^&]*)/.exec(query)![1]!;
+  expect(decodeURIComponent(subject)).toBe(r.title);
+  expect(decodeURIComponent(body)).toBe(r.body);
+  expect(body).toContain('%0A');
+});
