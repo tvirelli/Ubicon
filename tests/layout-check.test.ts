@@ -50,6 +50,8 @@ test('readUnifiVersion reads the Network version from the dashboard panel, non-b
   const dash = '<div data-testid="dashboard-network-version"><span>Network&nbsp;10.6.106</span><span>Up to date</span></div>'
     + '<div data-testid="dashboard-unifi-os-version"><span>UniFi OS&nbsp;5.1.33</span></div>';
   expect(readUnifiVersion(set(dash))).toBe('10.6.106');
+  const settings = '<li><span data-testid="network-version">Network 10.6.106</span></li>';
+  expect(readUnifiVersion(set(settings))).toBe('10.6.106');
 });
 
 test('readUnifiVersion finds a version in the page and falls back to unknown', () => {
