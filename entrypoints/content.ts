@@ -2,7 +2,7 @@ import { browser } from 'wxt/browser';
 import { loadOverlayMap, hydrateNames, mergeNames, paintAll, setLastClickedMac } from '../content/state';
 import { ensureModalButton, ensureHeaderBadge, setHeaderBadgeState, setLayoutBreak } from '../content/panel';
 import { checkHooks, LayoutMonitor, readUnifiVersion } from '../content/layout-check';
-import { clearBreak, saveBreak } from '../shared/layout-state';
+import { clearBreak, loadBreak, saveBreak } from '../shared/layout-state';
 
 export default defineContentScript({
   matches: ['https://unifi.ui.com/*'],
@@ -33,6 +33,9 @@ export default defineContentScript({
     // after repeated failures turn the badge amber and store the break for
     // the popup and options page to show.
     const monitor = new LayoutMonitor({ startedAt: Date.now() });
+    // A break stored by an earlier page load is only as good as this load
+    // can confirm: a healthy check clears it, a repeat re-declares it.
+    void loadBreak().then(stored => { if (stored) monitor.assumeDeclared(stored.signature); });
     const consoleKind = location.hostname === 'unifi.ui.com' ? 'cloud' as const : 'local' as const;
     const watchLayout = () => {
       const check = checkHooks(document);
@@ -100,6 +103,9 @@ export default defineContentScript({
     });
 
     browser.storage.onChanged.addListener(async () => { map = await loadOverlayMap(); repaint(); });
+    // Mutations drive repaints; a broken page that has gone quiet would
+    // otherwise never reach the monitor's third check.
+    setInterval(() => { try { watchLayout(); } catch {} }, 5_000);
     repaint();
   },
 });

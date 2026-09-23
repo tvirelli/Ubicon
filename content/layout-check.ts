@@ -106,6 +106,10 @@ export class LayoutMonitor {
     return { hooks: HOOK_ORDER.filter(h => check.broken.includes(h)), signature, at: now };
   }
 
+  // A break remembered from an earlier page load: treated as declared so
+  // the first healthy check clears it instead of leaving it stale.
+  assumeDeclared(signature: string): void { this.declared = signature; }
+
   // True once, the first time a healthy check follows a declared break.
   recovered(check: HookCheck): boolean {
     if (check.broken.length || !this.declared) return false;

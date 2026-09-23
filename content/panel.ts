@@ -153,6 +153,7 @@ const BADGE_TEXT: Record<BadgeState, string> = {
 const BADGE_COLOR: Record<BadgeState, string> = { ok: '#5B3FD1', warn: '#C77A00' };
 let badgeState: BadgeState = 'ok';
 let badgeShadow: ShadowRoot | undefined;
+let badgeHost: HTMLElement | undefined;
 
 export function setHeaderBadgeState(state: BadgeState): void {
   badgeState = state;
@@ -165,7 +166,14 @@ export function setHeaderBadgeState(state: BadgeState): void {
 }
 
 export function ensureHeaderBadge(root: ParentNode): void {
-  if (document.getElementById(HEADER_BADGE_ID)) return;
+  const existing = document.getElementById(HEADER_BADGE_ID);
+  if (existing) {
+    // Ours: nothing to do. Not ours (left by an earlier script instance,
+    // e.g. after the extension was reloaded without the page): replace it,
+    // since its shadow root is out of reach and it would stay purple.
+    if (badgeHost === existing) return;
+    existing.remove();
+  }
   const svg = [...root.querySelectorAll('header svg[class*="Logo-module_logo__"]')].find(s => !s.closest('a'));
   if (!svg) return;
   const host = document.createElement('span');
@@ -179,6 +187,7 @@ export function ensureHeaderBadge(root: ParentNode): void {
   style.textContent = HEADER_BADGE_CSS;
   shadow.append(style, ubiconMark(16, BADGE_COLOR[badgeState]));
   badgeShadow = shadow;
+  badgeHost = host;
   svg.insertAdjacentElement('afterend', host);
 }
 

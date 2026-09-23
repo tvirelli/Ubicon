@@ -135,3 +135,19 @@ test('clicking the badge while it is purple opens nothing', async () => {
   expect(document.getElementById('ubicon-layout-dialog')).toBeNull();
   setLayoutBreak(null); vi.restoreAllMocks();
 });
+
+test('a badge left behind by an earlier script instance is replaced, not adopted', async () => {
+  const { setHeaderBadgeState } = await import('../content/panel');
+  headerDom();
+  const orphan = document.createElement('span');
+  orphan.id = 'ubicon-header-badge';
+  orphan.title = 'Ubicon is active';
+  document.querySelector('header div')!.append(orphan);
+  setHeaderBadgeState('warn');
+  ensureHeaderBadge(document);
+  const host = document.getElementById('ubicon-header-badge')!;
+  expect(host).not.toBe(orphan);
+  expect(document.querySelectorAll('#ubicon-header-badge').length).toBe(1);
+  expect(host.dataset.state).toBe('warn');
+  setHeaderBadgeState('ok');
+});

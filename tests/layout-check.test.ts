@@ -99,3 +99,11 @@ test('after a break, a healthy check reports recovery once', () => {
   expect(m.recovered(healthy)).toBe(true);
   expect(m.recovered(healthy)).toBe(false);
 });
+
+test('a break remembered from an earlier page load counts as declared, so a healthy page recovers from it', () => {
+  const m = new LayoutMonitor({ startedAt: 0 });
+  m.assumeDeclared('clients-table');
+  const healthy: HookCheck = { present: ['clients-table'], broken: [] };
+  expect(m.recovered(healthy)).toBe(true);
+  expect(m.recovered(healthy)).toBe(false);
+});
