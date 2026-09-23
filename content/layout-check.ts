@@ -58,11 +58,12 @@ export function checkHooks(root: ParentNode): HookCheck {
 // Best effort. UniFi does not announce its version on every page; these are
 // the places it has been seen, and "unknown" is an honest answer.
 export function readUnifiVersion(root: ParentNode): string {
-  // The dashboard, the first page after login, shows "Network 10.6.106" in
-  // its versions panel (seen on 10.6.106). Other pages do not show it, so
-  // the content script remembers what the dashboard said.
-  const dash = root.querySelector('[data-testid="dashboard-network-version"]');
-  const m = /Networks+(d+(?:.d+)+)/.exec((dash?.textContent ?? '').replace(/ /g, ' '));
+  // "Network 10.6.106" appears on the dashboard (the first page after
+  // login) in its versions panel, and on the settings overview page. Other
+  // pages do not show it, so the content script remembers what it saw.
+  // Seen on 10.6.106.
+  const shown = root.querySelector('[data-testid="dashboard-network-version"], [data-testid="network-version"]');
+  const m = /Network\s+(\d+(?:\.\d+)+)/.exec((shown?.textContent ?? '').replace(/\u00a0/g, ' '));
   if (m?.[1]) return m[1];
   const meta = root.querySelector<HTMLMetaElement>('meta[name="unifi-network-version"], meta[name="version"]');
   if (meta?.content && /^\d+\.\d+/.test(meta.content)) return meta.content;
