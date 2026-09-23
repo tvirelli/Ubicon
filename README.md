@@ -4,10 +4,10 @@
 </p>
 
 <p align="center">
-  <a href="https://chromewebstore.google.com/detail/ubicon-device-icons-for-u/gceohejefeclhbbbkbifhpeonkfdgnkm"><img src="docs/readme/btn-chrome.svg" alt="Add to Chrome" height="52"></a>
-  <a href="https://microsoftedge.microsoft.com/addons/detail/jddpmahejanjljlgobeellacbgppbdff"><img src="docs/readme/btn-edge.svg" alt="Add to Edge" height="52"></a>
-  <a href="https://addons.mozilla.org/en-US/firefox/addon/ubicon-device-icons-for-unifi/"><img src="docs/readme/btn-firefox.svg" alt="Get for Firefox" height="52"></a>
-  <a href="https://github.com/tvirelli/Ubicon/releases"><img src="docs/readme/btn-releases.svg" alt="Download a release" height="52"></a>
+  <a href="https://chromewebstore.google.com/detail/ubicon-device-icons-for-u/gceohejefeclhbbbkbifhpeonkfdgnkm"><img src="docs/readme/btn-chrome.svg" alt="Add to Chrome" width="24%"></a>
+  <a href="https://microsoftedge.microsoft.com/addons/detail/jddpmahejanjljlgobeellacbgppbdff"><img src="docs/readme/btn-edge.svg" alt="Add to Edge" width="24%"></a>
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/ubicon-device-icons-for-unifi/"><img src="docs/readme/btn-firefox.svg" alt="Get for Firefox" width="24%"></a>
+  <a href="https://github.com/tvirelli/Ubicon/releases"><img src="docs/readme/btn-releases.svg" alt="Download a release" width="24%"></a>
 </p>
 
 <p align="center">
@@ -27,58 +27,52 @@
 
 <br>
 
-<table>
-<tr>
-<td width="50%" valign="top">
-<img src="docs/readme/sec-what.svg" alt="What is Ubicon. A visual layer on top of UniFi, nothing more." width="100%">
-<p>UniFi's Network admin shows a neat icon for every device it recognizes. For everything it does not, you get a generic placeholder. Ubicon fills that gap: it lets you assign the right icon to any client, from a community database or your own image, and that icon then shows up everywhere UniFi displays the device: the client list, the detail panel, dashboard widgets, insights and flows, and side panes.</p>
-</td>
-<td width="50%" valign="top">
-<img src="docs/readme/sec-why.svg" alt="Why it exists. Everyone's odd gadgets go unrecognized." width="100%">
-<p>UniFi's fingerprinting is excellent for mainstream gear, but it does not know the less common devices: Bambu Lab and Prusa printers, e-readers, handheld and retro consoles, Hak5 tools, industrial controllers, and hundreds of other things people actually run at home and at work. Ubicon fixes the look without ever changing your configuration, and it does it in a way the whole community can extend.</p>
-</td>
-</tr>
-</table>
+<sub><samp>WHAT IS UBICON</samp></sub>
+
+## A visual layer on top of UniFi, nothing more.
+
+UniFi's Network admin shows a neat icon for every device it recognizes. For everything it does not, you get a generic placeholder. Ubicon fills that gap: it lets you assign the right icon to any client, from a community database or your own image, and that icon then shows up everywhere UniFi displays the device: the client list, the detail panel, dashboard widgets, insights and flows, and side panes.
+
+<sub><samp>WHY IT EXISTS</samp></sub>
+
+## Everyone's odd gadgets go unrecognized.
+
+UniFi's fingerprinting is excellent for mainstream gear, but it does not know the less common devices: Bambu Lab and Prusa printers, e-readers, handheld and retro consoles, Hak5 tools, industrial controllers, and hundreds of other things people actually run at home and at work. Ubicon fixes the look without ever changing your configuration, and it does it in a way the whole community can extend.
 
 <br>
 
 <a name="features"></a>
+<sub><samp>FEATURES</samp></sub>
+
+## Everything the extension does
+
 <p align="center">
-  <img src="docs/readme/sec-features.svg" alt="Features. Everything the extension does." width="100%">
+  <img src="docs/readme/card-database.svg" alt="Community icon database. Hundreds of devices UniFi does not fingerprint, growing with every pull request." width="32%">
+  <img src="docs/readme/card-custom.svg" alt="Your own custom icons. Upload any image. It becomes a clean 128px icon and stays private to your machine." width="32%">
+  <img src="docs/readme/card-everywhere.svg" alt="Shows everywhere. Client list, detail panel, dashboard widgets, insights, flows and side panes." width="32%">
+</p>
+<p align="center">
+  <img src="docs/readme/card-safe.svg" alt="Read-only and safe. Never calls the UniFi API and never changes a single UniFi setting." width="32%">
+  <img src="docs/readme/card-sync.svg" alt="Optional GitHub sync. Assignments and custom icons in a private repo you own. No item limit, any browser." width="32%">
+  <img src="docs/readme/card-local.svg" alt="Cloud and local consoles. Works on unifi.ui.com out of the box. Add your own console address in Settings." width="32%">
 </p>
 
-<table>
-<tr>
-<td width="33%"><img src="docs/readme/card-database.svg" alt="Community icon database. Hundreds of devices UniFi does not fingerprint, growing with every pull request." width="100%"></td>
-<td width="33%"><img src="docs/readme/card-custom.svg" alt="Your own custom icons. Upload any image. It becomes a clean 128px icon and stays private to your machine." width="100%"></td>
-<td width="33%"><img src="docs/readme/card-everywhere.svg" alt="Shows everywhere. Client list, detail panel, dashboard widgets, insights, flows and side panes." width="100%"></td>
-</tr>
-<tr>
-<td width="33%"><img src="docs/readme/card-safe.svg" alt="Read-only and safe. Never calls the UniFi API and never changes a single UniFi setting." width="100%"></td>
-<td width="33%"><img src="docs/readme/card-sync.svg" alt="Optional GitHub sync. Assignments and custom icons in a private repo you own. No item limit, any browser." width="100%"></td>
-<td width="33%"><img src="docs/readme/card-local.svg" alt="Cloud and local consoles. Works on unifi.ui.com out of the box. Add your own console address in Settings." width="100%"></td>
-</tr>
-</table>
+<img src="docs/readme/shot-popup.svg" alt="The Ubicon popup listing every assigned device on the current console" width="46%" align="left">
 
-<table>
-<tr>
-<td width="50%" valign="middle">
-<img src="docs/readme/shot-popup.svg" alt="The Ubicon popup listing every assigned device on the current console" width="100%">
-</td>
-<td width="50%" valign="middle">
-<p><strong>The popup is your overview.</strong> Click the Ubicon button in the toolbar to see every device you have assigned, remove an assignment, export or import a backup, and add a local console.</p>
-<p><strong>A badge says it is working.</strong> A small Ubicon mark appears next to UniFi's own logo in the header whenever the extension is active on the page.</p>
-<p><strong>Matching that survives renames.</strong> Clients are keyed by MAC address first, with a fallback to the display name on pages that do not expose one, so the icon follows the device wherever UniFi shows it.</p>
-</td>
-</tr>
-</table>
+**The popup is your overview.** Click the Ubicon button in the toolbar to see every device you have assigned, remove an assignment, export or import a backup, and add a local console.
+
+**A badge says it is working.** A small Ubicon mark appears next to UniFi's own logo in the header whenever the extension is active on the page.
+
+**Matching that survives renames.** Clients are keyed by MAC address first, with a fallback to the display name on pages that do not expose one, so the icon follows the device wherever UniFi shows it.
+
+<br clear="all">
 
 <br>
 
 <a name="how-it-works"></a>
-<p align="center">
-  <img src="docs/readme/sec-how.svg" alt="How it works. From unknown client to the right icon in three clicks." width="100%">
-</p>
+<sub><samp>HOW IT WORKS</samp></sub>
+
+## From unknown client to the right icon in three clicks.
 
 <p align="center">
   <img src="docs/readme/step-1.svg" alt="Step 1. Open a client in the UniFi admin and click its own Change Icon button." width="100%">
@@ -86,33 +80,29 @@
   <img src="docs/readme/step-3.svg" alt="Step 3. Done. The icon follows that client across the whole UniFi UI." width="100%">
 </p>
 
-<table>
-<tr>
-<td width="50%"><img src="docs/readme/shot-assign-community.svg" alt="Choosing a device from the community database inside UniFi's Change Icon dialog" width="100%"></td>
-<td width="50%"><img src="docs/readme/shot-assign-custom.svg" alt="Uploading a custom icon inside UniFi's Change Icon dialog" width="100%"></td>
-</tr>
-</table>
+<p align="center">
+  <img src="docs/readme/shot-assign-community.svg" alt="Choosing a device from the community database inside UniFi's Change Icon dialog" width="49%">
+  <img src="docs/readme/shot-assign-custom.svg" alt="Uploading a custom icon inside UniFi's Change Icon dialog" width="49%">
+</p>
 
-<p>Ubicon lives inside UniFi's existing Change Icon dialog: a small mark next to the title opens the picker, so assigning an icon feels like part of the product. Pick a device from the search, or drop in any image and it is resized to a clean 128px icon on the spot.</p>
+Ubicon lives inside UniFi's existing Change Icon dialog: a small mark next to the title opens the picker, so assigning an icon feels like part of the product. Pick a device from the search, or drop in any image and it is resized to a clean 128px icon on the spot.
 
 <br>
 
 <a name="github-sync"></a>
+<sub><samp>GITHUB SYNC</samp></sub>
+
+## Every browser in step, through a repo you own.
+
+Optional, and off unless you set it up. Your icon assignments and custom icons are saved to a private repository in your own GitHub account, and every browser you connect stays in step through it. There is no item limit, custom icons sync too, and it works across Chrome, Edge and Firefox, signed in to the browser or not. A free GitHub account is enough. The author of Ubicon never sees your data.
+
 <p align="center">
-  <img src="docs/readme/sec-sync.svg" alt="GitHub sync. Every browser in step, through a repo you own." width="100%">
+  <img src="docs/readme/shot-sync-1.svg" alt="The GitHub sync wizard, first step" width="32%">
+  <img src="docs/readme/shot-sync-2.svg" alt="The GitHub sync wizard, access token step" width="32%">
+  <img src="docs/readme/shot-sync-3.svg" alt="The GitHub sync wizard, connected" width="32%">
 </p>
 
-<p>Optional, and off unless you set it up. Your icon assignments and custom icons are saved to a private repository in your own GitHub account, and every browser you connect stays in step through it. There is no item limit, custom icons sync too, and it works across Chrome, Edge and Firefox, signed in to the browser or not. A free GitHub account is enough. The author of Ubicon never sees your data.</p>
-
-<table>
-<tr>
-<td width="33%"><img src="docs/readme/shot-sync-1.svg" alt="The GitHub sync wizard, first step" width="100%"></td>
-<td width="33%"><img src="docs/readme/shot-sync-2.svg" alt="The GitHub sync wizard, access token step" width="100%"></td>
-<td width="33%"><img src="docs/readme/shot-sync-3.svg" alt="The GitHub sync wizard, connected" width="100%"></td>
-</tr>
-</table>
-
-<p>The full reference, with every question we could think of, is the <a href="https://www.tonyvirelli.com/ubicon/github-sync.html">GitHub sync guide</a>. The short version:</p>
+The full reference, with every question we could think of, is the [GitHub sync guide](https://www.tonyvirelli.com/ubicon/github-sync.html). The short version:
 
 <details>
 <summary><strong>First browser</strong> (about 3 minutes)</summary>
@@ -188,15 +178,15 @@ merges by timestamp and may undo your edit.
 <br>
 
 <a name="install"></a>
-<p align="center">
-  <img src="docs/readme/sec-install.svg" alt="Install. Pick your browser. Updates come from the store." width="100%">
-</p>
+<sub><samp>INSTALL</samp></sub>
+
+## Pick your browser. Updates come from the store.
 
 <p align="center">
-  <a href="https://chromewebstore.google.com/detail/ubicon-device-icons-for-u/gceohejefeclhbbbkbifhpeonkfdgnkm"><img src="docs/readme/btn-chrome.svg" alt="Add to Chrome" height="52"></a>
-  <a href="https://microsoftedge.microsoft.com/addons/detail/jddpmahejanjljlgobeellacbgppbdff"><img src="docs/readme/btn-edge.svg" alt="Add to Edge" height="52"></a>
-  <a href="https://addons.mozilla.org/en-US/firefox/addon/ubicon-device-icons-for-unifi/"><img src="docs/readme/btn-firefox.svg" alt="Get for Firefox" height="52"></a>
-  <a href="https://github.com/tvirelli/Ubicon/releases"><img src="docs/readme/btn-releases.svg" alt="Download a release" height="52"></a>
+  <a href="https://chromewebstore.google.com/detail/ubicon-device-icons-for-u/gceohejefeclhbbbkbifhpeonkfdgnkm"><img src="docs/readme/btn-chrome.svg" alt="Add to Chrome" width="24%"></a>
+  <a href="https://microsoftedge.microsoft.com/addons/detail/jddpmahejanjljlgobeellacbgppbdff"><img src="docs/readme/btn-edge.svg" alt="Add to Edge" width="24%"></a>
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/ubicon-device-icons-for-unifi/"><img src="docs/readme/btn-firefox.svg" alt="Get for Firefox" width="24%"></a>
+  <a href="https://github.com/tvirelli/Ubicon/releases"><img src="docs/readme/btn-releases.svg" alt="Download a release" width="24%"></a>
 </p>
 
 - **Chrome and Brave:** install from the Chrome Web Store. Brave uses the same package.
@@ -209,30 +199,28 @@ Ubicon works on `unifi.ui.com` out of the box. To use it with a console on your 
 <br>
 
 <a name="privacy"></a>
+<sub><samp>PRIVACY AND TRUST</samp></sub>
+
+## Overlay only. Never your settings, never your data.
+
 <p align="center">
-  <img src="docs/readme/sec-privacy.svg" alt="Privacy and trust. Overlay only. Never your settings, never your data." width="100%">
+  <img src="docs/readme/card-p-api.svg" alt="Nothing leaves your browser. No server of its own, no analytics, no account. Icons come from a public CDN." width="32%">
+  <img src="docs/readme/card-p-local.svg" alt="Custom icons stay local. Your uploads live in the browser. Export a backup, or use GitHub sync, to move them." width="32%">
+  <img src="docs/readme/card-p-token.svg" alt="Tokens are scoped to one repo. Ubicon refuses any token that can reach another repository in your account." width="32%">
 </p>
 
-<table>
-<tr>
-<td width="33%"><img src="docs/readme/card-p-api.svg" alt="Nothing leaves your browser. No server of its own, no analytics, no account. Icons come from a public CDN." width="100%"></td>
-<td width="33%"><img src="docs/readme/card-p-local.svg" alt="Custom icons stay local. Your uploads live in the browser. Export a backup, or use GitHub sync, to move them." width="100%"></td>
-<td width="33%"><img src="docs/readme/card-p-token.svg" alt="Tokens are scoped to one repo. Ubicon refuses any token that can reach another repository in your account." width="100%"></td>
-</tr>
-</table>
-
-<p>Ubicon is an overlay. It reads the page to find devices and draws icons over them. It never calls the UniFi API, never changes a UniFi setting, and has no server of its own. Assignments live in your browser's storage and, if you use your browser's own sync, travel with your browser account. With GitHub sync on, they also go to a private repository you own, and nowhere else. The full <a href="PRIVACY.md">privacy policy</a> spells out exactly what is stored where.</p>
+Ubicon is an overlay. It reads the page to find devices and draws icons over them. It never calls the UniFi API, never changes a UniFi setting, and has no server of its own. Assignments live in your browser's storage and, if you use your browser's own sync, travel with your browser account. With GitHub sync on, they also go to a private repository you own, and nowhere else. The full [privacy policy](PRIVACY.md) spells out exactly what is stored where.
 
 <br>
 
 <a name="contribute"></a>
-<p align="center">
-  <img src="docs/readme/sec-contribute.svg" alt="Contribute. No device stays unrecognized for long." width="100%">
-</p>
+<sub><samp>CONTRIBUTE</samp></sub>
 
-<p>The icon database is its own repository, <a href="https://github.com/tvirelli/Ubicon-DB">tvirelli/Ubicon-DB</a>, and every icon in it came from someone whose gadget UniFi did not recognize. Adding a device is one pull request: an icon file and a few lines of metadata. Contributors are credited by name in the database, and the new icon reaches every Ubicon user on the next refresh without an extension update.</p>
+## No device stays unrecognized for long.
 
-<p>Found a page where the icon does not show, or a device that matches badly? <a href="https://github.com/tvirelli/Ubicon/issues">Open an issue</a> with the console type and a screenshot. Code contributions are welcome too: the extension is TypeScript on WXT, with a test suite that runs on every change.</p>
+The icon database is its own repository, [tvirelli/Ubicon-DB](https://github.com/tvirelli/Ubicon-DB), and every icon in it came from someone whose gadget UniFi did not recognize. Adding a device is one pull request: an icon file and a few lines of metadata. Contributors are credited by name in the database, and the new icon reaches every Ubicon user on the next refresh without an extension update.
+
+Found a page where the icon does not show, or a device that matches badly? [Open an issue](https://github.com/tvirelli/Ubicon/issues) with the console type and a screenshot. Code contributions are welcome too: the extension is TypeScript on WXT, with a test suite that runs on every change.
 
 <br>
 
