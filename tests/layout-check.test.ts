@@ -10,7 +10,7 @@ const ROW = (withIcon = true) => `
 const PANEL = '<div class="PROPERTY_PANEL_CLASSNAME"><img src="https://static.ui.com/fingerprint/0/1_129x129.png"></div>';
 const DIALOG = (withTitle = true) => `
   <div role="dialog" class="modal__x">
-    ${withTitle ? '<header class="header__x"><div class="title__x">Change Icon</div></header>' : '<header class="header__x"></header>'}
+    ${withTitle ? '<header class="header__x"><div class="title__x">Change Icon</div></header>' : '<header class="header__x"><span>Change Icon</span></header>'}
     <img src="https://static.ui.com/fingerprint/0/1_129x129.png">
   </div>`;
 
@@ -123,4 +123,31 @@ test('readShellVersion reads Site Manager from the account menu and UniFi OS fro
   const dash = '<div data-testid="dashboard-unifi-os-version"><span>UniFi OS&nbsp;5.1.33</span><span>Up to date</span></div>';
   expect(readShellVersion(set(dash))).toBe('UniFi OS 5.1.33');
   expect(readShellVersion(set('<div>nothing</div>'))).toBe('unknown');
+});
+
+// Pages that are healthy but look different from the clients table must not
+// count as breaks: the check only speaks when the thing it knows is present.
+test('a table of rows without a client-name column is another table, not a broken clients table', () => {
+  const devices = '<table><tbody><tr data-row-id="dev-1"><td data-column-id="deviceName">UDM Pro</td></tr></tbody></table>';
+  const r = checkHooks(set(LOGO + devices));
+  expect(r.present).not.toContain('clients-table');
+  expect(r.broken).toEqual([]);
+});
+
+test('a property panel without an icon image is a device or settings panel, not a break', () => {
+  const panel = '<div class="PROPERTY_PANEL_CLASSNAME"><h2>Network settings</h2></div>';
+  const r = checkHooks(set(LOGO + ROW() + panel));
+  expect(r.broken).toEqual([]);
+});
+
+test('a dialog with a console image but no Change Icon text is another dialog, not a broken Change Icon dialog', () => {
+  const other = '<div role="dialog" class="modal__x"><header class="header__x"></header><img src="https://static.ui.com/fingerprint/ui/images/abc/nopadding/def.png"></div>';
+  const r = checkHooks(set(LOGO + ROW() + other));
+  expect(r.present).not.toContain('change-icon-dialog');
+  expect(r.broken).toEqual([]);
+});
+
+test('a Change Icon dialog is recognised by its text, and broken only when the title slot is gone', () => {
+  const broken = '<div role="dialog" class="modal__x"><header class="header__x"><span>Change Icon</span></header><img src="https://static.ui.com/fingerprint/0/1_129x129.png"></div>';
+  expect(checkHooks(set(LOGO + ROW() + broken)).broken).toEqual(['change-icon-dialog']);
 });

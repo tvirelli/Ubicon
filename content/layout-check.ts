@@ -30,23 +30,30 @@ export function checkHooks(root: ParentNode): HookCheck {
     note('header', !!logo);
   }
 
-  // content/state.ts: rows keyed by MAC, each with a client-name cell that
-  // holds the icon image Ubicon replaces.
-  const rows = root.querySelectorAll('tr[data-row-id]');
-  if (rows.length) {
+  // content/state.ts: the clients table is the one whose rows have a
+  // client-name cell. Other tables (devices, for one) also key rows by
+  // data-row-id, so rows alone prove nothing. Once the column is there, at
+  // least one cell must hold the icon image Ubicon replaces.
+  const nameCells = root.querySelectorAll('tr[data-row-id] td[data-column-id="clientName"]');
+  if (nameCells.length) {
     let withIcon = 0;
-    for (const row of rows) if (row.querySelector(`td[data-column-id="clientName"] ${ICON_IMG}`)) withIcon++;
+    for (const cell of nameCells) if (cell.querySelector(ICON_IMG)) withIcon++;
     note('clients-table', withIcon > 0);
-    // The property panel is only open some of the time, so its absence is
-    // not a break; when it is open it must hold an icon image.
-    const panel = root.querySelector('.PROPERTY_PANEL_CLASSNAME');
-    if (panel) note('client-panel', !!panel.querySelector(ICON_IMG));
   }
 
-  // content/panel.ts ensureModalButton: a Change Icon dialog needs a title
-  // in its header for the Ubicon mark to sit in.
+  // The property panel opens for devices, networks and settings as well as
+  // clients, and only a client's panel carries an icon image. A panel with
+  // one is a working client panel; a panel without one is simply not a
+  // client panel, so it is never reported as broken.
+  const panel = root.querySelector('.PROPERTY_PANEL_CLASSNAME');
+  if (panel?.querySelector(ICON_IMG)) note('client-panel', true);
+
+  // content/panel.ts ensureModalButton: the Change Icon dialog, known by its
+  // text, needs a title element in its header for the Ubicon mark to sit
+  // in. Other dialogs may carry fingerprint images too (the dashboard's
+  // console picture is one), so the image alone does not identify it.
   for (const dialog of root.querySelectorAll('[role="dialog"][class*="modal__"]')) {
-    if (!dialog.querySelector('img[src*="fingerprint"]')) continue;
+    if (!/\bChange Icon\b/.test(dialog.textContent ?? '')) continue;
     const title = dialog.querySelector(':scope > [class*="header__"] [class*="title__"]');
     note('change-icon-dialog', !!title);
     break;
