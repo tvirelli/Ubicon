@@ -2,7 +2,7 @@
 // body is assembled from a fixed list of fields and nothing else, so a MAC
 // address, device name, site name or console URL can never end up in it.
 
-export const SUPPORT_EMAIL = 'ubicon@tonyvirelli.com';
+export const SUPPORT_EMAIL = 'info@ubiconapp.com';
 const ISSUES_URL = 'https://github.com/tvirelli/Ubicon/issues/new';
 const LABEL = 'layout-change';
 

@@ -47,5 +47,5 @@ test('the popup shows the layout notice with report links when a break is stored
   expect($('layout-warning').textContent).toContain("UniFi's layout changed");
   expect(titleOf($<HTMLAnchorElement>('layout-issue').href)).toBe('Layout change detected: UniFi unknown, header');
   expect($<HTMLAnchorElement>('layout-issue').target).toBe('_blank');
-  expect($<HTMLAnchorElement>('layout-mail').href).toContain('mailto:ubicon@tonyvirelli.com');
+  expect($<HTMLAnchorElement>('layout-mail').href).toContain('mailto:info@ubiconapp.com');
 });

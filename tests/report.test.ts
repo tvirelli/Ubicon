@@ -55,7 +55,7 @@ test('the email link goes to the support address with the same subject and body'
   expect(q.get('subject')).toBe(r.title);
   expect(q.get('body')).toBe(r.body);
   expect(r.mailtoUrl.length).toBeLessThan(1000);
-  expect(SUPPORT_EMAIL).toBe('ubicon@tonyvirelli.com');
+  expect(SUPPORT_EMAIL).toBe('info@ubiconapp.com');
 });
 
 test('a general problem report has no hooks and leaves room for the user to describe it', () => {

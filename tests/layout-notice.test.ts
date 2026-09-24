@@ -46,7 +46,7 @@ test('a stored break shows the notice with both prefilled links', async () => {
   expect(issue.startsWith('https://github.com/tvirelli/Ubicon/issues/new?')).toBe(true);
   expect(titleOf(issue)).toBe('Layout change detected: UniFi 9.3.45, clients-table');
   expect(bodyOf(issue)).toContain('Ubicon version: 0.4.0');
-  expect($<HTMLAnchorElement>('layout-mail').href.startsWith('mailto:ubicon@tonyvirelli.com?')).toBe(true);
+  expect($<HTMLAnchorElement>('layout-mail').href.startsWith('mailto:info@ubiconapp.com?')).toBe(true);
 });
 
 test('dismiss hides the notice and remembers the signature', async () => {
@@ -66,5 +66,5 @@ test('the general report links carry the browser and version and no hooks', asyn
   const issue = $<HTMLAnchorElement>('report-issue').href;
   expect(titleOf(issue)).toBe('Problem report: Ubicon 0.4.0 on Firefox 141');
   expect(bodyOf(issue)).not.toContain('Hooks');
-  expect($<HTMLAnchorElement>('report-mail').href.startsWith('mailto:ubicon@tonyvirelli.com?')).toBe(true);
+  expect($<HTMLAnchorElement>('report-mail').href.startsWith('mailto:info@ubiconapp.com?')).toBe(true);
 });

@@ -112,7 +112,7 @@ test('clicking the amber badge opens a dialog with the GitHub, email and dismiss
   expect(new URL(gh.href).searchParams.get('title')).toBe('Layout change detected: UniFi 9.3.45, clients-table');
   expect(gh.target).toBe('_blank');
   const mail = root.querySelector<HTMLAnchorElement>('a[data-action="email"]')!;
-  expect(mail.href.startsWith('mailto:ubicon@tonyvirelli.com?')).toBe(true);
+  expect(mail.href.startsWith('mailto:info@ubiconapp.com?')).toBe(true);
   expect(root.querySelector('button[data-action="dismiss"]')).not.toBeNull();
   setHeaderBadgeState('ok'); setLayoutBreak(null); vi.restoreAllMocks();
 });

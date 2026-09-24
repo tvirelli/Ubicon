@@ -28,7 +28,7 @@ test('the options page always offers the two prefilled report links', async () =
   const issue = $<HTMLAnchorElement>('report-issue').href;
   expect(issue.startsWith('https://github.com/tvirelli/Ubicon/issues/new?')).toBe(true);
   expect(titleOf(issue).startsWith('Problem report: Ubicon 0.4.0 on')).toBe(true);
-  expect($<HTMLAnchorElement>('report-mail').href.startsWith('mailto:ubicon@tonyvirelli.com?')).toBe(true);
+  expect($<HTMLAnchorElement>('report-mail').href.startsWith('mailto:info@ubiconapp.com?')).toBe(true);
   expect($('layout-warning').hidden).toBe(true);
 });
 

@@ -102,7 +102,7 @@ Optional, and off unless you set it up. Your icon assignments and custom icons a
   <img src="docs/readme/shot-sync-3.svg" alt="The GitHub sync wizard, connected" width="32%">
 </p>
 
-The full reference, with every question we could think of, is the [GitHub sync guide](https://www.tonyvirelli.com/ubicon/github-sync.html). The short version:
+The full reference, with every question we could think of, is the [GitHub sync guide](https://www.ubiconapp.com/github-sync.html). The short version:
 
 <details>
 <summary><strong>First browser</strong> (about 3 minutes)</summary>
@@ -231,8 +231,8 @@ Found a page where the icon does not show, or a device that matches badly? [Open
 </p>
 
 <p align="center">
-  <a href="https://www.tonyvirelli.com/ubicon/">Website</a> &nbsp;&middot;&nbsp;
-  <a href="https://www.tonyvirelli.com/ubicon/github-sync.html">GitHub sync guide</a> &nbsp;&middot;&nbsp;
+  <a href="https://www.ubiconapp.com/">Website</a> &nbsp;&middot;&nbsp;
+  <a href="https://www.ubiconapp.com/github-sync.html">GitHub sync guide</a> &nbsp;&middot;&nbsp;
   <a href="PRIVACY.md">Privacy policy</a> &nbsp;&middot;&nbsp;
   <a href="https://github.com/tvirelli/Ubicon-DB">Device database</a> &nbsp;&middot;&nbsp;
   <a href="https://github.com/tvirelli/Ubicon/releases">Releases</a> &nbsp;&middot;&nbsp;

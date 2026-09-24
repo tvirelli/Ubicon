@@ -21,7 +21,7 @@ export const NEW_TOKEN_URL =
 export const TOKENS_URL = 'https://github.com/settings/personal-access-tokens';
 export const SIGNUP_URL = 'https://github.com/signup';
 // The full reference for the feature, on the website.
-export const GUIDE_URL = 'https://www.tonyvirelli.com/ubicon/github-sync.html';
+export const GUIDE_URL = 'https://www.ubiconapp.com/github-sync.html';
 export const ISSUES_URL = 'https://github.com/tvirelli/Ubicon/issues';
 // Used only when a failure leaves us without the owner's name. "user:@me" is
 // GitHub's own search shorthand for the signed-in account.
