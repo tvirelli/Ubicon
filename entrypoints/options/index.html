@@ -34,6 +34,25 @@
         </div>
       </aside>
 
+      <nav class="tabs" role="tablist" aria-label="Settings sections">
+        <button id="tab-assignments" type="button" role="tab" aria-selected="false" aria-controls="panel-assignments" tabindex="-1">Assignments</button>
+        <button id="tab-settings" type="button" role="tab" aria-selected="true" aria-controls="panel-settings">Settings</button>
+      </nav>
+
+      <div id="panel-assignments" role="tabpanel" aria-labelledby="tab-assignments" hidden>
+      <section id="assignments-block" class="block" aria-labelledby="assign-h">
+        <h2 id="assign-h">Assignments</h2>
+        <p id="assign-count" class="quiet" role="status"></p>
+        <label for="assign-search" class="vh">Search assignments</label>
+        <input id="assign-search" type="search" placeholder="Search by name or MAC" autocomplete="off" spellcheck="false" />
+        <p id="assign-empty" class="quiet" hidden>No devices assigned yet. Open a client's Change Icon dialog in UniFi (click its photo) and press the Ubicon mark next to the dialog title.</p>
+        <p id="assign-none" class="quiet" hidden>No assignment matches that search.</p>
+        <div id="assign-list" class="assign-list"></div>
+      </section>
+
+      </div>
+
+      <div id="panel-settings" role="tabpanel" aria-labelledby="tab-settings">
       <section id="sync" class="block" aria-labelledby="sync-h">
         <h2 id="sync-h">GitHub sync</h2>
 
@@ -172,6 +191,7 @@
           <a id="report-mail" class="btn small" href="#">Email info@ubiconapp.com</a>
         </div>
       </section>
+      </div>
     </div>
 
     <!-- ============ The GitHub sync wizard ============ -->

@@ -1,6 +1,8 @@
 import { addConsoleOrigin, listConsoleOrigins, removeConsoleOrigin } from '../../shared/consoles';
 import { initSyncUi } from './sync';
 import { initReportUi } from './report';
+import { initTabs } from './tabs';
+import { initAssignmentsUi } from './assignments';
 
 const $ = (id: string) => document.getElementById(id)!;
 
@@ -42,6 +44,8 @@ $('add').addEventListener('submit', async e => {
   }
 });
 
+initTabs();
 renderList();
 initSyncUi();
 initReportUi();
+void initAssignmentsUi();

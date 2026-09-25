@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import { exportAll, getAllAssignments, getCachedIcon, getIndexCache, iconKey } from '../../shared/storage';
+import { exportAll, getAllAssignments, getIndexCache } from '../../shared/storage';
 import { addConsoleOrigin, listConsoleOrigins, removeConsoleOrigin } from '../../shared/consoles';
 import { classifyConsoleUrl, offerText } from '../../shared/console-detect';
 import type { UbiconMsg, UbiconReply } from '../../shared/messages';
@@ -10,23 +10,7 @@ import { initLayoutNotice } from '../../shared/layout-notice';
 const send = (msg: UbiconMsg) => browser.runtime.sendMessage(msg) as Promise<UbiconReply>;
 const $ = (id: string) => document.getElementById(id)!;
 
-// Set once sync-status answers. A view-only connection cannot save changes
-// (GitHub refuses its writes), so the controls that make changes are locked
-// here and the notice at the top of the popup says why.
-let readOnly = false;
-
 const EMPTY_TEXT = "No devices assigned yet. Open a client's Change Icon dialog (click its photo) and press the Ubicon mark next to the dialog title.";
-
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-// Filename-safe slug for the icon download: lowercase, runs of
-// non-alphanumeric characters collapsed to a single '-', trimmed.
-const slugify = (label: string) => label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'icon';
 
 async function renderStatus() {
   const cache = await getIndexCache();
@@ -35,97 +19,23 @@ async function renderStatus() {
     : 'database not loaded yet';
 }
 
-// Rendering awaits storage for every row, so two calls can overlap (the one
-// at startup and the one that follows the sync status, for instance). Rows
-// are collected first and put on the page in one go, and only the newest
-// call gets to do that; otherwise both would append and every row would
-// show twice.
-let renderRun = 0;
-
-async function renderList() {
-  const run = ++renderRun;
-  const list = $('list');
-  const assignments = await getAllAssignments();
-  const macs = Object.keys(assignments).sort();
-  if (!macs.length) {
-    if (run === renderRun) list.replaceChildren(el('p', 'empty', EMPTY_TEXT));
-    return;
-  }
-  const rows: HTMLElement[] = [];
-  for (const mac of macs) {
-    const ref = assignments[mac];
-    if (!ref) continue; // keys come straight from Object.keys(assignments) above, narrows for TS only
-    const dataUri = await getCachedIcon(iconKey(ref));
-    if (run !== renderRun) return;
-    const row = el('div', 'row');
-    const img = el('img');
-    img.alt = '';
-    img.src = dataUri ?? '/icon/32.png';
-    const text = el('div');
-    text.append(el('div', 'name', ref.kind === 'db' ? ref.deviceId : ref.label), el('div', 'mac', mac));
-    const badge = el('span', 'badge', ref.kind === 'db' ? 'community' : dataUri ? 'custom' : 'custom · icon missing here');
-    const removeBtn = el('button', undefined, '✕');
-    removeBtn.title = readOnly ? VIEW_ONLY_TEXT : 'Remove';
-    removeBtn.disabled = readOnly;
-    row.append(img, text, badge, removeBtn);
-    let confirmTimer: ReturnType<typeof setTimeout> | undefined;
-    removeBtn.addEventListener('click', async () => {
-      if (!removeBtn.classList.contains('confirm')) {
-        // First click: arm a confirm state rather than removing right away;
-        // custom icons in particular can't be re-downloaded once gone.
-        removeBtn.textContent = 'Remove?';
-        removeBtn.classList.add('confirm');
-        removeBtn.title = 'Click again to remove';
-        confirmTimer = setTimeout(() => {
-          removeBtn.textContent = '✕';
-          removeBtn.classList.remove('confirm');
-          removeBtn.title = 'Remove';
-        }, 4000);
-        return;
-      }
-      clearTimeout(confirmTimer);
-      // Through the background worker, not shared/storage.ts directly: every
-      // change to assignments goes through its single write queue.
-      await send({ type: 'unassign', mac });
-      renderList();
-    });
-    if (ref.kind === 'custom') {
-      // Community bridge (spec §5): opens Ubicon-DB's structured
-      // device-suggestion issue form, prefilled with everything the
-      // extension actually knows about this device: just its display
-      // name. Vendor/model/category stay blank; a custom (non-database)
-      // device has no such data to prefill from.
-      const suggest = document.createElement('a');
-      suggest.textContent = '↗';
-      suggest.title = 'Suggest this device to the community database';
-      suggest.target = '_blank';
-      suggest.href = 'https://github.com/tvirelli/Ubicon-DB/issues/new?template=device-suggestion.yml&title=' +
-        encodeURIComponent(`Device suggestion: ${ref.label}`) +
-        '&device_name=' + encodeURIComponent(ref.label);
-      row.append(suggest);
-
-      if (dataUri) {
-        // The issue form can't accept a file via URL prefill; the user
-        // drags it into the form's attachment box themselves, so this just
-        // gets the icon out of the extension and into a file for them.
-        const download = document.createElement('a');
-        download.textContent = '⬇';
-        download.title = 'Download icon file for the suggestion';
-        download.href = '#';
-        download.addEventListener('click', e => {
-          e.preventDefault();
-          const a = document.createElement('a');
-          a.href = dataUri;
-          a.download = `${slugify(ref.label)}.png`;
-          a.click();
-        });
-        row.append(download);
-      }
-    }
-    rows.push(row);
-  }
-  list.replaceChildren(...rows);
+// The popup used to list every assigned device here. The list now lives on
+// the settings page (Assignments tab), where it has room for search; the
+// popup only says how many there are.
+async function renderCount() {
+  const n = Object.keys(await getAllAssignments()).length;
+  const count = $('count');
+  count.textContent = n === 0 ? EMPTY_TEXT : n === 1 ? '1 device assigned' : `${n} devices assigned`;
+  count.classList.toggle('none', n === 0);
 }
+
+$('manage').addEventListener('click', () => {
+  // Not openOptionsPage: that cannot carry the #assignments hash that
+  // selects the tab. The settings page opens in a full tab anyway.
+  void browser.tabs.create({ url: browser.runtime.getURL('/options.html#assignments') });
+});
+
+$('version').textContent = `v${browser.runtime.getManifest().version}`;
 
 async function renderConsoles() {
   const ul = $('consoles');
@@ -232,28 +142,27 @@ $('import-file').addEventListener('change', async e => {
     if (!reply.ok) throw new Error(reply.error);
     const counts = reply.counts ?? { assignments: 0, customIcons: 0 };
     $('db-status').textContent = `imported ${counts.assignments} assignments, ${counts.customIcons} custom icons`;
-    renderList();
+    renderCount();
   } catch (err) {
     $('db-status').textContent = err instanceof Error ? err.message : 'import failed';
   }
 });
 
 renderStatus();
-renderList();
+renderCount();
 renderConsoles();
 setupConsoleOffer();
 initPopupSync(status => {
+  // A view-only connection cannot save changes (GitHub refuses its writes),
+  // so Import is locked and the notice at the top of the popup says why.
   const locked = status.connected && status.readOnly;
   const importBtn = $('import') as HTMLButtonElement;
   importBtn.disabled = locked;
   importBtn.title = locked ? VIEW_ONLY_TEXT : '';
-  if (locked === readOnly) return;
-  readOnly = locked;
-  renderList();
 });
 
-// A background sync (or another window) can change assignments and cached
-// icons while the popup is open; redraw the list once the burst settles.
+// A background sync (or another window) can change assignments while the
+// popup is open; redraw the count once the burst settles.
 // Assignments live in storage.sync in browser mode and under 'assignments'
 // in storage.local otherwise (shared/storage.ts); icons cache as 'icon:*'.
 let redrawTimer: ReturnType<typeof setTimeout> | undefined;
@@ -263,7 +172,7 @@ browser.storage.onChanged.addListener((changes, area) => {
     : Object.keys(changes).some(k => k === 'assignments' || k === 'tombstones' || k.startsWith('icon:'));
   if (!relevant) return;
   clearTimeout(redrawTimer);
-  redrawTimer = setTimeout(() => { renderList(); renderStatus(); }, 200);
+  redrawTimer = setTimeout(() => { renderCount(); renderStatus(); }, 200);
 });
 
 // The layout-change notice, if the content script has stored one.

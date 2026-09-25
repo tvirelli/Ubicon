@@ -34,7 +34,10 @@
       </div>
     </aside>
     <p id="view-only" class="view-only" role="note" hidden>This browser is connected with a view-only token.</p>
-    <main id="list"><p class="empty">No devices assigned yet. Open a client's Change Icon dialog (click its photo) and press the Ubicon mark next to the dialog title.</p></main>
+    <main id="summary" class="summary">
+      <p id="count" role="status">No devices assigned yet. Open a client's Change Icon dialog (click its photo) and press the Ubicon mark next to the dialog title.</p>
+      <button id="manage" type="button" class="solid">Manage Assignments</button>
+    </main>
     <section id="consoles-section">
       <h2>Consoles</h2>
       <ul id="consoles"></ul>
@@ -54,7 +57,10 @@
       <button id="export">Export backup</button>
       <button id="import">Import backup</button>
       <input id="import-file" type="file" accept="application/json" hidden />
-      <a href="https://github.com/tvirelli/Ubicon-DB/issues/new?template=device-suggestion.yml" target="_blank">Suggest a device →</a>
+      <div class="footer-bottom">
+        <span id="version" class="version"></span>
+        <a href="https://github.com/tvirelli/Ubicon-DB/issues/new?template=device-suggestion.yml" target="_blank">Suggest a device →</a>
+      </div>
     </footer>
     <script type="module" src="./main.ts"></script>
   </body>

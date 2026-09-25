@@ -39,14 +39,14 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-test('an assignment that arrives while the popup is open appears in the list', async () => {
+test('an assignment that arrives while the popup is open updates the count', async () => {
   await openPopup();
-  expect($('list').querySelector('.row')).toBeNull();
+  expect($('count').textContent).toMatch(/^No devices assigned yet\./);
   await setAssignment('aa:bb:cc:dd:ee:01', { kind: 'db', deviceId: 'bambu-lab-h2d' });
   // The popup collapses a burst of storage changes into one redraw.
   await new Promise(r => setTimeout(r, 350));
   await flush();
-  expect($('list').querySelector('.row')).not.toBeNull();
+  expect($('count').textContent).toBe('1 device assigned');
 });
 
 test('the heads-up marker arriving while the popup is open shows the notice', async () => {

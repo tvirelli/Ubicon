@@ -46,6 +46,7 @@ beforeEach(() => {
   sent = [];
   openOptionsPage = vi.fn().mockResolvedValue(undefined);
   (fakeBrowser.runtime as unknown as { openOptionsPage: unknown }).openOptionsPage = openOptionsPage;
+  (fakeBrowser.runtime as unknown as { getManifest: () => { version: string } }).getManifest = () => ({ version: '0.5.0' });
   vi.spyOn(fakeBrowser.runtime, 'sendMessage').mockImplementation((async (msg: UbiconMsg): Promise<UbiconReply> => {
     sent.push(msg);
     if (msg.type === 'sync-status') return { ok: true, status, hint };
@@ -127,7 +128,7 @@ test('Enter setup code saves the step, then opens the Options page', async () =>
   expect(stepWhenOpened).toBe('code');
 });
 
-test('a view-only connection disables remove buttons and Import, and says why', async () => {
+test('a view-only connection disables Import and says why', async () => {
   await fakeBrowser.storage.local.set({
     'sync:mode': 'github',
     assignments: { 'aa:bb:cc:dd:ee:ff': { ref: { kind: 'db', deviceId: 'sonos-one' }, t: 1 } },
@@ -137,12 +138,10 @@ test('a view-only connection disables remove buttons and Import, and says why', 
   expect($('view-only').hidden).toBe(false);
   expect($('view-only').textContent).toBe('This browser is connected with a view-only token.');
   expect(($('import') as HTMLButtonElement).disabled).toBe(true);
-  const remove = document.querySelectorAll<HTMLButtonElement>('#list .row button');
-  expect(remove.length).toBe(1);
-  expect(remove[0]!.disabled).toBe(true);
+  expect($('count').textContent).toBe('1 device assigned');
 });
 
-test('a normal connection leaves remove and Import alone', async () => {
+test('a normal connection leaves Import alone', async () => {
   await fakeBrowser.storage.local.set({
     'sync:mode': 'github',
     assignments: { 'aa:bb:cc:dd:ee:ff': { ref: { kind: 'db', deviceId: 'sonos-one' }, t: 1 } },
@@ -150,20 +149,10 @@ test('a normal connection leaves remove and Import alone', async () => {
   status = connected();
   await openPopup();
   expect(($('import') as HTMLButtonElement).disabled).toBe(false);
-  const remove = document.querySelector<HTMLButtonElement>('#list .row button')!;
-  expect(remove.disabled).toBe(false);
-  expect(document.querySelector('#list .row .name')!.textContent).toBe('sonos-one');
-  expect(document.querySelector('#list .row .mac')!.textContent).toBe('aa:bb:cc:dd:ee:ff');
-
-  // The two-click remove still works as before.
-  remove.click();
-  expect(remove.textContent).toBe('Remove?');
-  remove.click();
-  await flush();
-  expect(sent).toContainEqual({ type: 'unassign', mac: 'aa:bb:cc:dd:ee:ff' });
+  expect($('view-only').hidden).toBe(true);
 });
 
 test('with nothing assigned the empty message is shown', async () => {
   await openPopup();
-  expect(document.querySelector('#list .empty')!.textContent).toMatch(/^No devices assigned yet\./);
+  expect($('count').textContent).toMatch(/^No devices assigned yet\./);
 });
