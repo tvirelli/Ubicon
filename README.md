@@ -57,9 +57,9 @@ UniFi's fingerprinting is excellent for mainstream gear, but it does not know th
   <img src="docs/readme/card-local.svg" alt="Cloud and local consoles. Works on unifi.ui.com out of the box. Add your own console address in Settings." width="32%">
 </p>
 
-<img src="docs/readme/shot-popup.svg" alt="The Ubicon popup listing every assigned device on the current console" width="46%" align="left">
+<img src="docs/readme/shot-popup.svg" alt="The Ubicon popup with the number of assigned devices, a Manage Assignments button and the console list" width="46%" align="left">
 
-**The popup is your overview.** Click the Ubicon button in the toolbar to see every device you have assigned, remove an assignment, export or import a backup, and add a local console.
+**The popup is your overview.** Click the Ubicon button in the toolbar to see how many devices you have assigned, export or import a backup, and add a local console. Manage Assignments opens the settings page, where every assignment is listed with a search box.
 
 **A badge says it is working.** A small Ubicon mark appears next to UniFi's own logo in the header whenever the extension is active on the page.
 
