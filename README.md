@@ -17,6 +17,8 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/tvirelli/Ubicon?color=8B72E8&labelColor=12141C&style=flat-square" alt="MIT license"></a>
 </p>
 
+<p align="center"><sub>Independent project. Not made by, affiliated with, or endorsed by Ubiquiti.</sub></p>
+
 <p align="center">
   <img src="docs/readme/shot-clients.svg" alt="The UniFi client list with a custom icon on every device" width="100%">
 </p>
@@ -240,3 +242,5 @@ Found a page where the icon does not show, or a device that matches badly? [Open
 </p>
 
 <p align="center">MIT, see <a href="LICENSE">LICENSE</a>. The device database is separately MIT licensed at <a href="https://github.com/tvirelli/Ubicon-DB">tvirelli/Ubicon-DB</a>.</p>
+
+<p align="center"><sub>Ubicon is an independent project by Tony Virelli. It is not affiliated with, endorsed by, sponsored by, approved by, or supported by Ubiquiti Inc. Ubiquiti, UniFi, and all related names, logos, product designs, and screenshots of the UniFi interface are trademarks or property of Ubiquiti Inc. They appear here only to describe the software Ubicon works with. All other product names and logos, including those of the device makers in the icon database and the browser makers, belong to their respective owners.</sub></p>
